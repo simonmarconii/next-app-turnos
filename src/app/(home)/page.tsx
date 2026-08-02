@@ -30,7 +30,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-      <section className="px-4 py-8 sm:px-6 lg:px-8 lg:py-25 bg-[#d8ccb9]/80">
+      <section className="px-4 py-8 sm:px-6 lg:px-8 lg:py-25">
         <p className="text-5xl lg:text-8xl font-medium text-[#1f1a16]">
           ¿Que hacemos?
         </p>
