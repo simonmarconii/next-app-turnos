@@ -1,6 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+
+type DateType = {
+    id: string;
+    date: string;
+    service_id: string;
+    user_id: string;
+    created_at: string;
+}
 
 type FormData = {
     date: string;
@@ -31,20 +39,92 @@ const timeSlots = [
     "17:00",
 ];
 
+function splitDateTime(raw: string) {
+    const normalized = raw.replace("T", " ");
+    const [datePart, timePart = ""] = normalized.split(" ");
+    const time = timePart.slice(0, 5); // "HH:MM"
+    return { datePart, time };
+}
+
 export default function SchedulesPage() {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState(initialFormData);
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [dates, setDates] = useState<DateType[]>([]);
+    const [dateError, setDateError] = useState("");
+
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchDate = async () => {
+            setLoading(true);
+            try {
+                const response = await fetch("/api/schedule", {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                });
+                if (!response.ok) {
+                    console.error("Error fetching data:", response.statusText);
+                    return;
+                }
+
+                const data = await response.json();
+                setDates(data);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+
+        fetchDate();
+    }, []);
+
+    const bookedTimesForSelectedDate = useMemo(() => {
+        if (!formData.date) return [];
+        return dates
+            .map((d) => splitDateTime(d.date))
+            .filter((d) => d.datePart === formData.date)
+            .map((d) => d.time);
+    }, [dates, formData.date]);
+
+    const availableTimeSlots = useMemo(() => {
+        return timeSlots.filter((slot) => !bookedTimesForSelectedDate.includes(slot));
+    }, [bookedTimesForSelectedDate]);
+
+    const isDayFull = formData.date !== "" && availableTimeSlots.length === 0;
 
     function updateField(field: keyof FormData, value: string) {
         setFormData((current) => ({ ...current, [field]: value }));
+    }
+
+    function handleDateChange(value: string) {
+        setDateError("");
+        const bookedForThatDay = dates
+            .map((d) => splitDateTime(d.date))
+            .filter((d) => d.datePart === value)
+            .map((d) => d.time);
+        const stillAvailable = timeSlots.filter((slot) => !bookedForThatDay.includes(slot));
+
+        if (value && stillAvailable.length === 0) {
+            setDateError("No quedan turnos disponibles para ese día. Elegí otra fecha.");
+            setFormData((current) => ({ ...current, date: value, time: "" }));
+            return;
+        }
+
+
+        setFormData((current) => ({ ...current, date: value, time: "" }));
     }
 
     function handleFirstStepNext() {
         if (!formData.date || !formData.time) {
             return;
         }
-
+        if (isDayFull) {
+            return;
+        }
         setStep(2);
     }
 
@@ -93,8 +173,16 @@ export default function SchedulesPage() {
         }
     }
 
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center">
+                <p className="px-4 py-8 text-sm font-medium text-[#4d4037]">Loading...</p>
+            </div>
+        );
+    }
+
     return (
-        <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 lg:px-8 lg:py-29">
+        <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
             <div className="overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur">
                 <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                     <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">
@@ -155,9 +243,14 @@ export default function SchedulesPage() {
                                             name="date"
                                             type="date"
                                             value={formData.date}
-                                            onChange={(event) => updateField("date", event.target.value)}
+                                            onChange={(event) => handleDateChange(event.target.value)}
                                             className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                                         />
+                                        {dateError && (
+                                            <p className="text-sm font-medium text-[#b3412c]">
+                                                {dateError}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="grid gap-2">
@@ -169,15 +262,22 @@ export default function SchedulesPage() {
                                             name="time"
                                             value={formData.time}
                                             onChange={(event) => updateField("time", event.target.value)}
-                                            disabled={!formData.date}
-                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                            disabled={!formData.date || isDayFull}
+                                            className="rounded-2xl border border-[#d8cabd] bg-white appearance-none px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                                         >
                                             <option value="">Elegí un horario</option>
-                                            {timeSlots.map((timeSlot) => (
-                                                <option key={timeSlot} value={timeSlot}>
-                                                    {timeSlot}
-                                                </option>
-                                            ))}
+                                            {timeSlots.map((timeSlot) => {
+                                                const isBooked = bookedTimesForSelectedDate.includes(timeSlot);
+                                                return (
+                                                    <option
+                                                        key={timeSlot}
+                                                        value={timeSlot}
+                                                        disabled={isBooked}
+                                                    >
+                                                        {timeSlot} {isBooked ? "(no disponible)" : ""}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
 
@@ -185,7 +285,7 @@ export default function SchedulesPage() {
                                         <button
                                             type="button"
                                             onClick={handleFirstStepNext}
-                                            disabled={!formData.date || !formData.time}
+                                            disabled={!formData.date || !formData.time || isDayFull}
                                             className="rounded-full bg-[#b56b49] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9f5d3f] disabled:cursor-not-allowed disabled:bg-[#d7b09d]"
                                         >
                                             Siguiente
