@@ -7,33 +7,63 @@ export async function POST(request: Request) {
 
     const realDate = new Date(date + "T" + time + ":00.000Z");
 
-    let user = await prisma.user.findUnique({
-        where: {
-            email: email
-        }
-    })
-
-    if (!user) {
-        user = await prisma.user.create({
-            data: {
-                name,
-                lastname,
-                email,
-                phone
+    try {
+        let user = await prisma.user.findUnique({
+            where: {
+                email: email
             }
         })
-    }
-
-    const newSchedule = await prisma.schedule.create({
-        data: {
-            date: realDate,
-            user_id: user.id,
-            service_id: "4be9d980-3396-4b20-995d-bda1811f492d"
+    
+        if (!user) {
+            user = await prisma.user.create({
+                data: {
+                    name,
+                    lastname,
+                    email,
+                    phone
+                }
+            })
         }
-    })
+    
+        const newSchedule = await prisma.schedule.create({
+            data: {
+                date: realDate,
+                user_id: user.id,
+                service_id: "4be9d980-3396-4b20-995d-bda1811f492d"
+            }
+        })
+    
+        return new Response(JSON.stringify(newSchedule), {
+            status: 201,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    } catch (error) {
+        return new Response(JSON.stringify({ error }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
+}
 
-    return new Response(JSON.stringify(newSchedule), {
-        status: 201,
-        headers: { 'Content-Type': 'application/json' }
-    })
+export async function GET() {
+    try {
+        const schedules = await prisma.schedule.findMany({include: {user: true, service: true}});
+
+        if (!schedules) {
+            return new Response(JSON.stringify({ error: "No schedules found" }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
+        return new Response(JSON.stringify(schedules), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    } catch (error) {
+        return new Response(JSON.stringify({ error }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
 }
