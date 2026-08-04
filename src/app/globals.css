@@ -3,6 +3,7 @@
 :root {
   --background: #f6f1e8;
   --foreground: #1f1a16;
+  --nav-height: 5rem;
 }
 
 @theme inline {
@@ -15,6 +16,7 @@
 html {
   scroll-behavior: smooth;
   height: 100%;
+  background: var(--background);
 }
 
 body {
@@ -22,6 +24,7 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top, rgba(110, 140, 122, 0.12), transparent 34%),
     radial-gradient(circle at bottom right, rgba(181, 107, 73, 0.12), transparent 22%),
