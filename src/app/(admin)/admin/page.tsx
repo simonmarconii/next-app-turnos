@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/app/_context/auth-provider";
+import Button from "@/components/button";
 
 type ServiceType = {
     id: string;
@@ -190,7 +191,7 @@ export default function AdminPage() {
     }
 
     return (
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
             <div className="rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.06)] sm:p-8">
                 <h1 className="text-3xl font-semibold text-[#1f1a16] sm:text-4xl">
                     Bienvenido, {user?.email}
@@ -271,19 +272,15 @@ export default function AdminPage() {
                                         <p className="mt-1 text-sm text-[#4d4037]">${service.price}</p>
                                     </div>
                                     <div className="flex justify-end gap-4">
-                                        <button
-                                            type="button"
-                                            onClick={() => {
+                                        <Button onClick={() => {
                                                 setEditingService(service);
                                                 setEditForm({ price: service.price });
-                                            }}
-                                            className="rounded-[2rem] bg-[#b56b49] px-5 py-3 text-sm font-semibold text-[#fff8f1] transition hover:bg-[#a95f40]"
-                                        >
+                                            }} size="medium">
                                             Editar
-                                        </button>
-                                        <button onClick={() => setDeletingService(service)} className="bg-red-500 text-[#fff8f1] px-5 py-3 font-semibold rounded-[2rem] transition hover:bg-red-600">
+                                        </Button>
+                                        <Button onClick={() => setDeletingService(service)} variant="destructive" size="medium">
                                             Eliminar
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             ))
@@ -319,9 +316,9 @@ export default function AdminPage() {
                             />
                         </div>
                         <div className="pt-2">
-                            <button type="submit" className="rounded-[2rem] bg-[#b56b49] px-5 py-3 text-sm font-semibold text-[#fff8f1] transition hover:bg-[#a95f40]">
+                            <Button type="submit" size="medium">
                                 Agregar
-                            </button>
+                            </Button>
                         </div>
                     </form>
                 </div>
@@ -352,19 +349,12 @@ export default function AdminPage() {
                                 />
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setEditingService(null)}
-                                    className="rounded-[2rem] border border-[#d8cabd] px-5 py-3 text-sm font-semibold text-[#4d4037] transition hover:bg-[#efe6d8]"
-                                >
+                                <Button onClick={() => setEditingService(null)} variant="outline" size="medium">
                                     Cancelar
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="rounded-[2rem] bg-[#b56b49] px-5 py-3 text-sm font-semibold text-[#fff8f1] transition hover:bg-[#a95f40]"
-                                >
+                                </Button>
+                                <Button type="submit" size="medium">
                                     Guardar cambios
-                                </button>
+                                </Button>
                             </div>
                         </form>
                     </div>
@@ -375,29 +365,24 @@ export default function AdminPage() {
             {deletingService && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
                     <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
-                        <div className="flex flex-col items-center gap-5 text-center">
-                            <div>
-                                <h2 className="mt-2 text-xl font-semibold text-[#1f1a16]">
-                                    ¿Desea eliminar {deletingService.name}?
-                                </h2>
-                                <p className="mt-2 text-sm leading-6 text-[#4d4037]">
-                                    Esta acción no se puede deshacer y quitará el servicio de la lista.
-                                </p>
+                        <div className="flex flex-col gap-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+                                        Eliminar servicio
+                                    </p>
+                                    <h2 className="mt-2 text-xl font-semibold text-[#1f1a16]">
+                                        ¿Desea eliminar {deletingService.name}?
+                                    </h2>
+                                </div>
                             </div>
-                            <div className="flex w-full flex-col gap-3 sm:flex-row sm:justify-center">
-                                <button
-                                    type="button"
-                                    onClick={() => setDeletingService(null)}
-                                    className="rounded-[2rem] border border-[#d8cabd] px-5 py-3 text-sm font-semibold text-[#4d4037] transition hover:bg-[#efe6d8]"
-                                >
+                            <div className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center">
+                                <Button onClick={() => setDeletingService(null)} variant="outline" size="medium">
                                     Cancelar
-                                </button>
-                                <button
-                                    onClick={() => handleDeleteService(deletingService.id)}
-                                    className="bg-red-500 text-[#fff8f1] px-5 py-3 font-semibold rounded-[2rem] transition hover:bg-red-600"
-                                >
+                                </Button>
+                                <Button onClick={() => handleDeleteService(deletingService.id)} variant="destructive" size="medium">
                                     Eliminar
-                                </button>
+                                </Button>
                             </div>
                         </div>
                     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAuth } from "@/app/_context/auth-provider";
+import Button from "@/components/button";
 import { useState } from "react";
 
 type FormData = {
@@ -75,12 +76,9 @@ export default function LoginPage() {
                             </div>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                            <button
-                                type="submit"
-                                className="rounded-full bg-[#234034] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#173128]"
-                            >
+                            <Button type="submit" size="medium">
                                 Iniciar sesión
-                            </button>
+                            </Button>
                         </div>
                     </section>
                 </form>

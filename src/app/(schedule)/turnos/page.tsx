@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@/components/button";
 import { useEffect, useMemo, useState } from "react";
 
 type DateType = {
@@ -313,21 +314,20 @@ export default function SchedulesPage() {
                                             <option value="">Elegí un servicio</option>
                                             {services.map((service) => (
                                                 <option key={service.id} value={service.id}>
-                                                    {service.name}
+                                                    {service.name} - ${service.price}
                                                 </option>
                                             ))}
                                         </select>
                                     </div>
 
                                     <div className="flex justify-end">
-                                        <button
-                                            type="button"
+                                        <Button 
                                             onClick={handleFirstStepNext}
                                             disabled={!formData.serviceId}
-                                            className="rounded-full bg-[#b56b49] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9f5d3f] disabled:cursor-not-allowed disabled:bg-[#d7b09d]"
+                                            variant="primary"
                                         >
                                             Siguiente
-                                        </button>
+                                        </Button>
                                     </div>
                                 </section>
                             ) : step === 2 ? (
@@ -380,21 +380,15 @@ export default function SchedulesPage() {
                                     </div>
 
                                     <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                                        <button
-                                            type="button"
-                                            onClick={() => setStep(1)}
-                                            className="rounded-full border border-[#d8cabd] px-6 py-3 text-sm font-semibold text-[#4d4037] transition hover:border-[#b56b49] hover:text-[#b56b49]"
-                                        >
+                                        <Button onClick={() => setStep(1)} variant="outline">
                                             Volver
-                                        </button>
-                                        <button
-                                            type="button"
+                                        </Button>
+                                        <Button
                                             onClick={handleSecondStepNext}
                                             disabled={!formData.date || !formData.time || isDayFull}
-                                            className="rounded-full bg-[#b56b49] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9f5d3f] disabled:cursor-not-allowed disabled:bg-[#d7b09d]"
                                         >
                                             Siguiente
-                                        </button>
+                                        </Button>
                                     </div>
                                 </section>
                             ) : (
@@ -460,19 +454,12 @@ export default function SchedulesPage() {
                                     </div>
 
                                     <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                                        <button
-                                            type="button"
-                                            onClick={() => setStep(2)}
-                                            className="rounded-full border border-[#d8cabd] px-6 py-3 text-sm font-semibold text-[#4d4037] transition hover:border-[#b56b49] hover:text-[#b56b49]"
-                                        >
+                                        <Button onClick={() => setStep(2)} variant="outline">
                                             Volver
-                                        </button>
-                                        <button
-                                            type="submit"
-                                            className="rounded-full bg-[#234034] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#173128]"
-                                        >
+                                        </Button>
+                                        <Button type="submit" variant="primary">
                                             Confirmar turno
-                                        </button>
+                                        </Button>
                                     </div>
                                 </section>
                             )}
