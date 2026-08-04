@@ -1,5 +1,6 @@
-import EmailTemplate from "@/app/(schedule)/_components/email-template";
+import EmailTemplate from "@/components/email-template";
 import { resend } from "../../../../lib/resend";
+import "dotenv/config";
 
 export async function POST(request: Request) {
     const body = await request.json();
@@ -16,7 +17,7 @@ export async function POST(request: Request) {
     try {
         // Con el email de prueba de resend solo se puede enviar a un email verificado, por eso se usa el email de prueba.
         const { data, error } = await resend.emails.send({
-            from: "Acme <onboarding@resend.dev>",
+            from: process.env.EMAIL_FROM!,
             to: ["raulalfonsin123456789@gmail.com"],
             subject: "Tu turno ha sido reservado.",
             react: EmailTemplate({
