@@ -10,7 +10,6 @@ export default function HomePage() {
           src="/lima-pedicura.jpg"
           alt="Pie"
           fill
-          priority
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-[#1f1a16]/45" />
@@ -82,7 +81,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-4">
             <FaWhatsapp className="text-2xl lg:text-3xl" />
-            <a href="https://wa.me/5491134567890" target="_blank" rel="noopener noreferrer" className="text-xl lg:text-2xl">+54 9 11 3456-7890</a>
+            <a href="https://wa.me/5492914432920" target="_blank" rel="noopener noreferrer" className="text-xl lg:text-2xl">+54 9 291 443-2920</a>
           </div>
         </div>
       </section>
