@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { useAuth } from "@/app/_context/auth-provider";
 
 type ServiceType = {
     id: string;
@@ -9,31 +10,72 @@ type ServiceType = {
     created_at: string;
 }
 
+type UserType = {
+    id: string;
+    name: string;
+    lastname: string;
+    email: string;
+    phone: string;
+    created_at: string;
+}
+
+type DateType = {
+    id: string;
+    user_id: string;
+    user: UserType;
+    service_id: string;
+    service: ServiceType;
+    date: string;
+    created_at: string;
+}
+
 export default function AdminPage() {
     const [services, setServices] = useState<ServiceType[]>([]);
+    const [dates, setDates] = useState<DateType[]>([]);
     const [newService, setNewService] = useState({ name: "", price: 0 });
     const [editingService, setEditingService] = useState<ServiceType | null>(null);
     const [deletingService, setDeletingService] = useState<ServiceType | null>(null);
     const [editForm, setEditForm] = useState({ price: 0 });
     const [loading, setLoading] = useState(true);
 
+    const { user } = useAuth();
+
     useEffect(() => {
-        const fetchDate = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const response = await fetch("/api/service", {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                });
-                if (!response.ok) {
-                    console.error("Error fetching data:", response.statusText);
+                const [scheduleResponse, servicesResponse] = await Promise.all([
+                    fetch("/api/schedule", {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }),
+                    fetch("/api/service", {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }),
+                ]);
+
+                if (!scheduleResponse.ok) {
+                    console.error("Error fetching schedules:", scheduleResponse.statusText);
                     return;
                 }
 
-                const data = await response.json();
-                setServices(data);
+                if (!servicesResponse.ok) {
+                    console.error("Error fetching services:", servicesResponse.statusText);
+                    return;
+                }
+
+                const [scheduleData, servicesData] = await Promise.all([
+                    scheduleResponse.json(),
+                    servicesResponse.json(),
+                ]);
+
+                setDates(scheduleData);
+                setServices(servicesData);
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -41,7 +83,7 @@ export default function AdminPage() {
             }
         }
 
-        fetchDate();
+        fetchData();
     }, []);
 
     async function handleAddService(event: FormEvent<HTMLFormElement>) {
@@ -151,11 +193,68 @@ export default function AdminPage() {
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-8 sm:px-6 lg:px-8">
             <div className="rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.06)] sm:p-8">
                 <h1 className="text-3xl font-semibold text-[#1f1a16] sm:text-4xl">
-                    Admin page
+                    Bienvenido, {user?.email}
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-[#4d4037]">
-                    Gestiona los servicios disponibles y agrega nuevas opciones de forma ordenada.
+                    Gestiona los turnos y servicios de tu negocio desde este panel de administración.
                 </p>
+            </div>
+
+            <div className="rounded-[2rem] border border-[#d8cabd] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
+                <div className="flex flex-col items-center gap-1 md:flex-row md:gap-4">
+                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+                        Turnos
+                    </p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+                        -
+                    </p>
+                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+                        Hoy: {new Date().toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric" })}
+                    </p>
+                </div>
+                <div className="mt-4 grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                    {dates && (
+                        dates.map((date) => (
+                            <div
+                                key={date.id}
+                                className="rounded-2xl border border-[#e4d6c8] bg-white px-4 py-3 shadow-sm"
+                            >
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm text-[#1f1a16]">
+                                        Dia:
+                                    </p>
+                                    <p className="text-sm font-medium text-[#1f1a16]">
+                                        {new Date(date.date).toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric" })}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm text-[#1f1a16]">
+                                        Hora:
+                                    </p>
+                                    <p className="text-sm font-medium text-[#1f1a16]">
+                                        {new Date(date.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col">
+                                    <p className="text-sm text-[#1f1a16]">
+                                        Cliente:
+                                    </p>
+                                    <p className="text-sm font-medium text-[#1f1a16]">
+                                        {date.user.name} {date.user.lastname} - {date.user.email}
+                                    </p>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-sm text-[#1f1a16]">
+                                        Servicio:
+                                    </p>
+                                    <p className="text-sm font-medium text-[#1f1a16]">
+                                        {date.service.name} - ${date.service.price}
+                                    </p>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -213,7 +312,9 @@ export default function AdminPage() {
                                 type="number" 
                                 name="price"
                                 value={newService.price}
-                                onChange={(e) => setNewService({ ...newService, price: parseFloat(e.target.value) })}
+                                onChange={(e) => {
+                                    setNewService({ ...newService, price: parseFloat(e.target.value) })}
+                                }
                                 className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                             />
                         </div>
