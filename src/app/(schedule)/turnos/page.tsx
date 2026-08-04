@@ -10,7 +10,15 @@ type DateType = {
     created_at: string;
 }
 
+type ServiceType = {
+    id: string;
+    name: string;
+    price: number;
+    created_at: string;
+}
+
 type FormData = {
+    serviceId: string;
     date: string;
     time: string;
     name: string;
@@ -20,6 +28,7 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
+    serviceId: "",
     date: "",
     time: "",
     name: "",
@@ -51,27 +60,47 @@ export default function SchedulesPage() {
     const [formData, setFormData] = useState(initialFormData);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [dates, setDates] = useState<DateType[]>([]);
+    const [services, setServices] = useState<ServiceType[]>([]);
     const [dateError, setDateError] = useState("");
 
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchDate = async () => {
+        const fetchData = async () => {
             setLoading(true);
             try {
-                const response = await fetch("/api/schedule", {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                });
-                if (!response.ok) {
-                    console.error("Error fetching data:", response.statusText);
+                const [scheduleResponse, servicesResponse] = await Promise.all([
+                    fetch("/api/schedule", {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }),
+                    fetch("/api/service", {
+                        method: "GET",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    }),
+                ]);
+
+                if (!scheduleResponse.ok) {
+                    console.error("Error fetching schedules:", scheduleResponse.statusText);
                     return;
                 }
 
-                const data = await response.json();
-                setDates(data);
+                if (!servicesResponse.ok) {
+                    console.error("Error fetching services:", servicesResponse.statusText);
+                    return;
+                }
+
+                const [scheduleData, servicesData] = await Promise.all([
+                    scheduleResponse.json(),
+                    servicesResponse.json(),
+                ]);
+
+                setDates(scheduleData);
+                setServices(servicesData);
             } catch (error) {
                 console.error("Error fetching data:", error);
             } finally {
@@ -79,8 +108,12 @@ export default function SchedulesPage() {
             }
         }
 
-        fetchDate();
+        fetchData();
     }, []);
+
+    const selectedService = useMemo(() => {
+        return services.find((service) => service.id === formData.serviceId);
+    }, [formData.serviceId, services]);
 
     const bookedTimesForSelectedDate = useMemo(() => {
         if (!formData.date) return [];
@@ -98,6 +131,17 @@ export default function SchedulesPage() {
 
     function updateField(field: keyof FormData, value: string) {
         setFormData((current) => ({ ...current, [field]: value }));
+    }
+
+    function handleServiceChange(value: string) {
+        setDateError("");
+        setFormData((current) => ({
+            ...current,
+            serviceId: value,
+            date: "",
+            time: "",
+        }));
+        setStep(1);
     }
 
     function handleDateChange(value: string) {
@@ -119,13 +163,20 @@ export default function SchedulesPage() {
     }
 
     function handleFirstStepNext() {
+        if (!formData.serviceId) {
+            return;
+        }
+        setStep(2);
+    }
+
+    function handleSecondStepNext() {
         if (!formData.date || !formData.time) {
             return;
         }
         if (isDayFull) {
             return;
         }
-        setStep(2);
+        setStep(3);
     }
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -160,6 +211,7 @@ export default function SchedulesPage() {
                     email: formData.email,
                     date: formData.date,
                     time: formData.time,
+                    serviceName: selectedService?.name,
                 }),
             });
 
@@ -204,7 +256,7 @@ export default function SchedulesPage() {
                         >
                             1
                         </div>
-                        <span className={step === 1 ? "text-[#1f1a16]" : ""}>Elegir turno</span>
+                        <span className={step === 1 ? "text-[#1f1a16]" : ""}>Elegir servicio</span>
                         <div className="h-px flex-1 bg-[#e3d6ca]" />
                         <div
                             className={`flex h-9 w-9 items-center justify-center rounded-full border ${
@@ -216,6 +268,19 @@ export default function SchedulesPage() {
                             2
                         </div>
                         <span className={step === 2 ? "text-[#1f1a16]" : "text-[#907968]"}>
+                            Elegir turno
+                        </span>
+                        <div className="h-px flex-1 bg-[#e3d6ca]" />
+                        <div
+                            className={`flex h-9 w-9 items-center justify-center rounded-full border ${
+                                step === 3
+                                    ? "border-[#b56b49] bg-[#b56b49] text-white"
+                                    : "border-[#d9c8b8] bg-white text-[#907968]"
+                            }`}
+                        >
+                            3
+                        </div>
+                        <span className={step === 3 ? "text-[#1f1a16]" : "text-[#907968]"}>
                             Tus datos
                         </span>
                     </div>
@@ -224,7 +289,7 @@ export default function SchedulesPage() {
                         <section className="rounded-2xl border border-[#cfe0d5] bg-[#f3faf5] p-6 text-[#234034]">
                             <h2 className="text-2xl font-semibold">Tu turno fue solicitado</h2>
                             <p className="mt-3 leading-7">
-                                {formData.name} {formData.lastname}, te vamos a contactar a {formData.email} para confirmar el turno del {formData.date} a las {formData.time}.
+                                {formData.name} {formData.lastname}, te esperamos el {formData.date} a las {formData.time}!.
                             </p>
                             <p className="mt-3 text-sm text-[#4f695a]">
                                 Teléfono: {formData.phone}
@@ -233,6 +298,39 @@ export default function SchedulesPage() {
                     ) : (
                         <form className="space-y-8" onSubmit={handleSubmit}>
                             {step === 1 ? (
+                                <section className="grid gap-6">
+                                    <div className="grid gap-2">
+                                        <label htmlFor="serviceId" className="text-sm font-medium text-[#4d4037]">
+                                            Servicio
+                                        </label>
+                                        <select
+                                            id="serviceId"
+                                            name="serviceId"
+                                            value={formData.serviceId}
+                                            onChange={(event) => handleServiceChange(event.target.value)}
+                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                        >
+                                            <option value="">Elegí un servicio</option>
+                                            {services.map((service) => (
+                                                <option key={service.id} value={service.id}>
+                                                    {service.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={handleFirstStepNext}
+                                            disabled={!formData.serviceId}
+                                            className="rounded-full bg-[#b56b49] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9f5d3f] disabled:cursor-not-allowed disabled:bg-[#d7b09d]"
+                                        >
+                                            Siguiente
+                                        </button>
+                                    </div>
+                                </section>
+                            ) : step === 2 ? (
                                 <section className="grid gap-6">
                                     <div className="grid gap-2">
                                         <label htmlFor="date" className="text-sm font-medium text-[#4d4037]">
@@ -281,10 +379,17 @@ export default function SchedulesPage() {
                                         </select>
                                     </div>
 
-                                    <div className="flex justify-end">
+                                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
                                         <button
                                             type="button"
-                                            onClick={handleFirstStepNext}
+                                            onClick={() => setStep(1)}
+                                            className="rounded-full border border-[#d8cabd] px-6 py-3 text-sm font-semibold text-[#4d4037] transition hover:border-[#b56b49] hover:text-[#b56b49]"
+                                        >
+                                            Volver
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleSecondStepNext}
                                             disabled={!formData.date || !formData.time || isDayFull}
                                             className="rounded-full bg-[#b56b49] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#9f5d3f] disabled:cursor-not-allowed disabled:bg-[#d7b09d]"
                                         >
@@ -357,7 +462,7 @@ export default function SchedulesPage() {
                                     <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
                                         <button
                                             type="button"
-                                            onClick={() => setStep(1)}
+                                            onClick={() => setStep(2)}
                                             className="rounded-full border border-[#d8cabd] px-6 py-3 text-sm font-semibold text-[#4d4037] transition hover:border-[#b56b49] hover:text-[#b56b49]"
                                         >
                                             Volver

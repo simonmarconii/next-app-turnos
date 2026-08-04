@@ -4,7 +4,7 @@ import { resend } from "../../../../lib/resend";
 export async function POST(request: Request) {
     const body = await request.json();
 
-    const { email, name, lastname, date, time } = body;
+    const { email, name, lastname, date, time, serviceName } = body;
 
     if (!email || !name || !lastname || !date || !time) {
         return Response.json(
@@ -23,7 +23,8 @@ export async function POST(request: Request) {
                 name,
                 lastname,
                 date,
-                time
+                time,
+                serviceName
             })
         });
 

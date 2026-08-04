@@ -3,7 +3,7 @@ import { prisma } from "../../../../lib/prisma";
 export async function POST(request: Request) {
     const body = await request.json();
 
-    const {name, lastname, email, phone, date, time} = body;
+    const {name, lastname, email, phone, date, time, serviceId} = body;
 
     const realDate = new Date(date + "T" + time + ":00.000Z");
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
             data: {
                 date: realDate,
                 user_id: user.id,
-                service_id: "4be9d980-3396-4b20-995d-bda1811f492d"
+                service_id: serviceId
             }
         })
     
@@ -47,7 +47,10 @@ export async function POST(request: Request) {
 
 export async function GET() {
     try {
-        const schedules = await prisma.schedule.findMany({include: {user: true, service: true}});
+        const schedules = await prisma.schedule.findMany({
+            include: {user: true, service: true},
+            orderBy: {date: "asc"}
+        });
 
         if (!schedules) {
             return new Response(JSON.stringify({ error: "No schedules found" }), {
