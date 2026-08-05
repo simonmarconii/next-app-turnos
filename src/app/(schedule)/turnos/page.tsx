@@ -1,22 +1,9 @@
 "use client";
 
+import { useDate } from "@/app/_context/date-provider";
+import { useService } from "@/app/_context/service-provider";
 import Button from "@/components/button";
-import { useEffect, useMemo, useState } from "react";
-
-type DateType = {
-    id: string;
-    date: string;
-    service_id: string;
-    user_id: string;
-    created_at: string;
-}
-
-type ServiceType = {
-    id: string;
-    name: string;
-    price: number;
-    created_at: string;
-}
+import { useMemo, useState } from "react";
 
 type FormData = {
     serviceId: string;
@@ -39,20 +26,17 @@ const initialFormData: FormData = {
 };
 
 const timeSlots = [
-    "10:00",
+    "09:00",
     "11:00",
-    "12:00",
     "13:00",
-    "14:00",
     "15:00",
-    "16:00",
     "17:00",
 ];
 
 function splitDateTime(raw: string) {
     const normalized = raw.replace("T", " ");
     const [datePart, timePart = ""] = normalized.split(" ");
-    const time = timePart.slice(0, 5); // "HH:MM"
+    const time = timePart.slice(0, 5);
     return { datePart, time };
 }
 
@@ -60,57 +44,10 @@ export default function SchedulesPage() {
     const [step, setStep] = useState(1);
     const [formData, setFormData] = useState(initialFormData);
     const [isSubmitted, setIsSubmitted] = useState(false);
-    const [dates, setDates] = useState<DateType[]>([]);
-    const [services, setServices] = useState<ServiceType[]>([]);
     const [dateError, setDateError] = useState("");
 
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const [scheduleResponse, servicesResponse] = await Promise.all([
-                    fetch("/api/schedule", {
-                        method: "GET",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    }),
-                    fetch("/api/service", {
-                        method: "GET",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    }),
-                ]);
-
-                if (!scheduleResponse.ok) {
-                    console.error("Error fetching schedules:", scheduleResponse.statusText);
-                    return;
-                }
-
-                if (!servicesResponse.ok) {
-                    console.error("Error fetching services:", servicesResponse.statusText);
-                    return;
-                }
-
-                const [scheduleData, servicesData] = await Promise.all([
-                    scheduleResponse.json(),
-                    servicesResponse.json(),
-                ]);
-
-                setDates(scheduleData);
-                setServices(servicesData);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-
-        fetchData();
-    }, []);
+    const { dates, addDate, loading: datesLoading, error: datesError } = useDate();
+    const { services, loading: servicesLoading } = useService();
 
     const selectedService = useMemo(() => {
         return services.find((service) => service.id === formData.serviceId);
@@ -159,7 +96,6 @@ export default function SchedulesPage() {
             return;
         }
 
-
         setFormData((current) => ({ ...current, date: value, time: "" }));
     }
 
@@ -188,18 +124,7 @@ export default function SchedulesPage() {
         }
 
         try {
-            const response = await fetch("/api/schedule", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-            });
-
-            if (!response.ok) {
-                console.error("Error submitting form:", response.statusText);
-                return;
-            }
+            await addDate(formData);
 
             const emailResponse = await fetch("/api/send", {
                 method: "POST",
@@ -218,6 +143,7 @@ export default function SchedulesPage() {
 
             if (!emailResponse.ok) {
                 console.error("Error sending email:", emailResponse.statusText);
+                return;
             }
         } catch (error) {
             console.error("Error submitting form:", error);
@@ -226,17 +152,9 @@ export default function SchedulesPage() {
         }
     }
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center">
-                <p className="px-4 py-8 text-sm font-medium text-[#4d4037]">Loading...</p>
-            </div>
-        );
-    }
-
     return (
         <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
-            <div className="overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur">
+            <div className={`overflow-hidden rounded-[2rem] border ${ datesError ? "border-[#b56b49]" : "border-[#cdbfae]"} bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
                 <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                     <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">
                         Turnos
@@ -309,14 +227,20 @@ export default function SchedulesPage() {
                                             name="serviceId"
                                             value={formData.serviceId}
                                             onChange={(event) => handleServiceChange(event.target.value)}
-                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                            className="rounded-2xl border border-[#d8cabd] bg-white appearance-none px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                                         >
-                                            <option value="">Elegí un servicio</option>
-                                            {services.map((service) => (
-                                                <option key={service.id} value={service.id}>
-                                                    {service.name} - ${service.price}
-                                                </option>
-                                            ))}
+                                            { servicesLoading ? (
+                                                <option value="">Cargando servicios...</option>
+                                            ) : (
+                                                <>
+                                                    <option value="">Elegí un servicio</option>
+                                                    {services.map((service) => (
+                                                        <option key={service.id} value={service.id}>
+                                                            {service.name} - ${service.price}
+                                                        </option>
+                                                    ))}
+                                                </>
+                                            )}
                                         </select>
                                     </div>
 
@@ -363,19 +287,25 @@ export default function SchedulesPage() {
                                             disabled={!formData.date || isDayFull}
                                             className="rounded-2xl border border-[#d8cabd] bg-white appearance-none px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                                         >
-                                            <option value="">Elegí un horario</option>
-                                            {timeSlots.map((timeSlot) => {
-                                                const isBooked = bookedTimesForSelectedDate.includes(timeSlot);
-                                                return (
-                                                    <option
-                                                        key={timeSlot}
-                                                        value={timeSlot}
-                                                        disabled={isBooked}
-                                                    >
-                                                        {timeSlot} {isBooked ? "(no disponible)" : ""}
-                                                    </option>
-                                                );
-                                            })}
+                                            { datesLoading ? (
+                                                <option value="">Cargando horarios...</option>
+                                            ) : (
+                                                <>
+                                                    <option value="">Elegí un horario</option>
+                                                    {timeSlots.map((timeSlot) => {
+                                                        const isBooked = bookedTimesForSelectedDate.includes(timeSlot);
+                                                        return (
+                                                            <option
+                                                                key={timeSlot}
+                                                                value={timeSlot}
+                                                                disabled={isBooked}
+                                                            >
+                                                                {timeSlot} {isBooked ? "(no disponible)" : ""}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </>
+                                            )}
                                         </select>
                                     </div>
 
@@ -461,6 +391,7 @@ export default function SchedulesPage() {
                                             Confirmar turno
                                         </Button>
                                     </div>
+                                    {datesError && <p className="text-sm text-[#b56b49]">{datesError}</p>}
                                 </section>
                             )}
                         </form>
