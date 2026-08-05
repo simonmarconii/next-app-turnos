@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/app/_context/auth-provider";
 import DatesList from "@/components/dates-list";
-import ServiceList from "@/components/service-list";
+import ServicesList from "@/components/services-list";
 import AddServiceForm from "@/components/add-service-form";
 
 export default function AdminPage() {
@@ -40,7 +40,7 @@ export default function AdminPage() {
                     <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
                         Servicios disponibles
                     </p>
-                    <ServiceList />
+                    <ServicesList />
                 </div>
                 <AddServiceForm />
             </div>

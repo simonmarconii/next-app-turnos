@@ -5,7 +5,7 @@ import Button from "./button";
 import { FormEvent, useState } from "react";
 import { ServiceType } from "@/types/service";
 
-export default function ServiceList() {
+export default function ServicesList() {
     const [editingService, setEditingService] = useState<ServiceType | null>(null);
     const [deletingService, setDeletingService] = useState<ServiceType | null>(null);
     const [editForm, setEditForm] = useState({ price: 0 });
@@ -28,8 +28,17 @@ export default function ServiceList() {
         <div>
             {
                 loading ? (
-                    <div>
-                        <p>Loading...</p>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="rounded-2xl border border-[#e4d6c8] bg-white px-4 py-3 shadow-sm animate-pulse">
+                                <div className="h-6 bg-gray-200 rounded w-3/4" />
+                                <div className="h-5 bg-gray-200 rounded w-1/3 mt-2" />
+                                <div className="flex justify-end gap-4 mt-4">
+                                    <div className="h-10 bg-gray-200 rounded w-20" />
+                                    <div className="h-10 bg-gray-200 rounded w-20" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <>
