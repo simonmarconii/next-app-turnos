@@ -9,6 +9,7 @@ type AuthContextType = {
     user: User | null;
     session: Session | null;
     loading: boolean;
+    error: string | null;
     login: (email: string, password: string) => Promise<void>;
     logout: () => void;
 }
@@ -17,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     session: null,
     loading: true,
+    error: null,
     login: async (email: string, password: string) => {},
     logout: () => {},
 });
@@ -25,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const supabase = createClient();
 
@@ -47,6 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [])
 
     async function login(email: string, password: string) {
+        setError(null);
         const response = await fetch("/api/auth/login", {
             method: "POST",
             headers: {
@@ -60,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (!response.ok) {
             console.error("Error to login:", response.statusText);
+            setError("Error al iniciar sesión");
             return;
         }
 
@@ -72,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     function logout() {
         setLoading(true);
+        setError(null);
         supabase.auth.signOut().then(() => {
             setUser(null);
             setSession(null);
@@ -82,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <AuthContext.Provider value={{ user, session, loading, login, logout }}>
+        <AuthContext.Provider value={{ user, session, loading, error, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

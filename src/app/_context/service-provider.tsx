@@ -6,6 +6,7 @@ import { ServiceType } from "@/types/service";
 type ServiceContextType = {
     services: ServiceType[];
     loading: boolean;
+    error: string | null;
     addService: (newService: { name: string; price: number }) => Promise<void>;
     deleteService: (serviceId: string) => Promise<void>;
     updateService: (editingService: ServiceType, price: number) => Promise<void>;
@@ -14,6 +15,7 @@ type ServiceContextType = {
 const ServiceContext = createContext<ServiceContextType>({
     services: [],
     loading: true,
+    error: null,
     addService: async () => {},
     deleteService: async () => {},
     updateService: async () => {},
@@ -22,6 +24,7 @@ const ServiceContext = createContext<ServiceContextType>({
 export function ServiceProvider({ children }: { children: React.ReactNode }) {
     const [services, setServices] = useState<ServiceType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -36,6 +39,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
                 if (!response.ok) {
                     console.error("Error fetching services:", response.statusText);
+                    setError("Error al obtener los servicios");
                     return;
                 }
 
@@ -44,6 +48,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
                 setServices(servicesData);
             } catch (error) {
                 console.error("Error fetching data:", error);
+                setError("Error al obtener los servicios");
             } finally {
                 setLoading(false);
             }
@@ -54,6 +59,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     async function addService(newService: { name: string; price: number }) {
         setLoading(true);
+        setError(null);
 
         try {
             const response = await fetch("/api/service", {
@@ -69,6 +75,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
             if (!response.ok) {
                 console.error("Error adding service:", response.statusText);
+                setError("Error al agregar el servicio");
                 return;
             }
 
@@ -76,6 +83,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
             setServices((prevServices) => [...prevServices, data]);
         } catch (error) {
             console.error("Error adding service:", error);
+            setError("Error al agregar el servicio");
         } finally {
             setLoading(false);
         }
@@ -83,6 +91,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     async function deleteService(serviceId: string) {
         setLoading(true);
+        setError(null);
 
         try {
             const response = await fetch(`/api/service/${serviceId}`, {
@@ -94,12 +103,14 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
             if (!response.ok) {
                 console.error("Error deleting service:", response.statusText);
+                setError("Error al eliminar el servicio");
                 return;
             }
 
             setServices((prevServices) => prevServices.filter(service => service.id !== serviceId));
         } catch (error) {
             console.error("Error deleting service:", error);
+            setError("Error al eliminar el servicio");
         } finally {
             setLoading(false);
         }
@@ -107,6 +118,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
     async function updateService(editingService: ServiceType, price: number) {
         setLoading(true);
+        setError(null);
 
         try {
             const response = await fetch(`/api/service/${editingService.id}`, {
@@ -121,6 +133,7 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
 
             if (!response.ok) {
                 console.error("Error updating service:", response.statusText);
+                setError("Error al actualizar el servicio");
                 return;
             }
 
@@ -131,13 +144,14 @@ export function ServiceProvider({ children }: { children: React.ReactNode }) {
             ));
         } catch (error) {
             console.error("Error updating service:", error);
+            setError("Error al actualizar el servicio");
         } finally {
             setLoading(false);
         }
     }
 
     return (
-        <ServiceContext.Provider value={{ services, loading, addService, deleteService, updateService }}>
+        <ServiceContext.Provider value={{ services, loading, addService, deleteService, updateService, error }}>
             {children}
         </ServiceContext.Provider>
     );
