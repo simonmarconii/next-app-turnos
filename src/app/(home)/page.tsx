@@ -10,6 +10,7 @@ export default function HomePage() {
           src="/lima-pedicura.jpg"
           alt="Pie"
           fill
+          loading="eager"
           sizes="100vw"
         />
         <div className="absolute inset-0 bg-[#1f1a16]/52" />
