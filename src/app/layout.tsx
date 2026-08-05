@@ -4,6 +4,8 @@ import "@/app/globals.css";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { AuthProvider } from "./_context/auth-provider";
+import { ServiceProvider } from "./_context/service-provider";
+import { DateProvider } from "./_context/date-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pedicura Garmendia",
+  title: "Pedicuria Virginia",
   description: "Aplicacion para gestion de turnos.",
 };
 
@@ -33,8 +35,12 @@ export default function RootLayout({
     >
       <body>
         <AuthProvider>
-          <Navbar />
-          <main className="flex-1 pt-[var(--nav-height)]">{children}</main>
+          <ServiceProvider>
+            <DateProvider>
+              <Navbar />
+              <main className="flex-1 pt-[var(--nav-height)]">{children}</main>
+            </DateProvider>
+          </ServiceProvider>
         </AuthProvider>
         <Footer />
       </body>
