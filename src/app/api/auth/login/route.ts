@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { createClient } from "../../../../../lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();
