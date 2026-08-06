@@ -1,13 +1,18 @@
-"use client";
-
-import { useAuth } from "@/app/_context/auth-provider";
 import DatesList from "@/components/dates-list";
 import ServicesList from "@/components/services-list";
 import AddServiceForm from "@/components/add-service-form";
+import { createClient } from "@/lib/supabase/client";
 
-export default function AdminPage() {
+type Props = {
+    searchParams: {
+        search_dates: string;
+    }
+};
 
-    const { user } = useAuth();
+export default async function AdminPage({ searchParams }: Props) {
+    const { search_dates: datesQuery } = await searchParams;
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
 
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
@@ -32,7 +37,7 @@ export default function AdminPage() {
                         Hoy: {new Date().toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric" })}
                     </p>
                 </div>
-                <DatesList />
+                <DatesList datesQuery={datesQuery} />
             </div>
 
             <div className="flex flex-col gap-6">
