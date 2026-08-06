@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { NextRequest } from "next/server";
 
 export async function POST(request: Request) {
     const body = await request.json();
@@ -45,11 +46,40 @@ export async function POST(request: Request) {
     }
 }
 
-export async function GET() {
+type CluseType = {
+    date: {
+        gte?: Date;
+        lt?: Date;
+    }
+}
+
+export async function GET(request: NextRequest) {
+
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get("search_dates") || "upcoming";
+
+    let clause: CluseType = {
+        date: {
+            gte: new Date()
+        }
+    };
+    if (query === "past") {
+        clause = {
+            date: {
+                lt: new Date()
+            }
+        }
+    } else if (query === "all") {
+        clause = {
+            date: {}
+        }
+    }
+
     try {
         const schedules = await prisma.schedule.findMany({
             include: {user: true, service: true},
-            orderBy: {date: "asc"}
+            orderBy: {date: "asc"},
+            where: clause
         });
 
         if (!schedules) {
