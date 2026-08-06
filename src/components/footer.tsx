@@ -16,7 +16,7 @@ export default function Footer() {
                 <div className="flex flex-col gap-2 lg:items-end">
                     <p className="text-sm text-[#4d4037]">
                         Diseñado y desarrollado por{" "}
-                        <Link href="mailto:marconisimon21@gmail.com" className="font-semibold text-[#1f1a16] underline underline-offset-4 transition hover:text-[#b56b49]">
+                        <Link href="mailto:marconisimon21@gmail.com" className="font-semibold text-[#1f1a16] underline underline-offset-4 transition hover:text-[#453e38]">
                             Simon
                         </Link>
                     </p>

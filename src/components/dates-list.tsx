@@ -24,8 +24,8 @@ export default async function DatesList({ datesQuery }: Props) {
             </div>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                 <>
-                    {dates && (
-                        dates.map((date: DateType) => (
+                    {dates.data && (
+                        dates.data.map((date: DateType) => (
                             <DateCard key={date.id} date={date} />
                         ))
                     )}
