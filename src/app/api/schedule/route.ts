@@ -34,7 +34,7 @@ export async function POST(request: Request) {
             }
         })
     
-        return new Response(JSON.stringify(newSchedule), {
+        return new Response(JSON.stringify({data: newSchedule}), {
             status: 201,
             headers: { 'Content-Type': 'application/json' }
         })
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
             })
         }
 
-        return new Response(JSON.stringify(schedules), {
+        return new Response(JSON.stringify({data: schedules}), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         })

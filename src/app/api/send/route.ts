@@ -30,28 +30,24 @@ export async function POST(request: Request) {
         });
 
         if (error) {
-            return Response.json({
+            return new Response(JSON.stringify({
                 error: error.message
-            }, {
+            }), {
                 status: error.statusCode || 500,
+                headers: { 'Content-Type': 'application/json' }
             })
         }
 
-        return Response.json(
-            {
-                message: "Email sent successfully.",
-                data,
-            },
-            { status: 201 }
-        );
+        return new Response(JSON.stringify({ message: "Email sent successfully.", data }), {
+            status: 201,
+            headers: { 'Content-Type': 'application/json' }
+        })
     } catch (error) {
         console.error("Error sending email:", error);
 
-        return Response.json(
-            {
-                error: "An error occurred while sending the email.",
-            },
-            { status: 500 }
-        );
+        return new Response(JSON.stringify({error: "An error occurred while sending the email."}), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        })
     }
 }

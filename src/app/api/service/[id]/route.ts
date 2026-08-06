@@ -14,7 +14,7 @@ export async function DELETE(request: Request, context: RouteParams) {
             }
         })
         
-        return new Response(JSON.stringify("Service deleted successfully"), {
+        return new Response(JSON.stringify({message: "Service deleted successfully"}), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         })
@@ -42,7 +42,7 @@ export async function PUT(request: Request, context: RouteParams) {
             }
         })
         
-        return new Response(JSON.stringify(updatedService), {
+        return new Response(JSON.stringify({message: "Service updated successfully", data: updatedService}), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         })

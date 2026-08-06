@@ -11,7 +11,7 @@ export async function GET() {
             })
         }
 
-        return new Response(JSON.stringify(services), {
+        return new Response(JSON.stringify({data: services}), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         })
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
             }
         })
 
-        return new Response(JSON.stringify(newService), {
+        return new Response(JSON.stringify({data: newService}), {
             status: 201,
             headers: { 'Content-Type': 'application/json' }
         })
