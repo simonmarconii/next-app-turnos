@@ -26,7 +26,7 @@ const sizeStyles: Record<ButtonSize, string> = {
 
 export default function Button({ children, onClick, variant = "primary", size = "medium", type = "button", disabled }: ButtonProps) {
     return (
-        <button type={type} disabled={disabled} className={`rounded-full font-semibold ${variantStyles[variant]} ${sizeStyles[size]}`} onClick={onClick}>
+        <button type={type} disabled={disabled} className={`rounded-full font-semibold ${variantStyles[variant]} ${sizeStyles[size]} ${disabled ? 'cursor-not-allowed' : ''}`} onClick={onClick}>
             {children}
         </button>
     );
