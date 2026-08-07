@@ -1,7 +1,8 @@
 import DatesList from "@/components/dates-list";
 import ServicesList from "@/components/services-list";
 import AddServiceForm from "@/components/add-service-form";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
 
 type Props = {
     searchParams: {
@@ -11,7 +12,8 @@ type Props = {
 
 export default async function AdminPage({ searchParams }: Props) {
     const { search_dates: datesQuery } = await searchParams;
-    const supabase = await createClient();
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
 
     return (
@@ -25,7 +27,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 </p>
             </div>
 
-            <div className="flex flex-col gap-4 rounded-[2rem] border border-[#d8cabd] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
+            <div className="flex flex-col gap-2 rounded-[2rem] border border-[#d8cabd] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
                 <div className="flex flex-col items-center gap-1 md:flex-row md:gap-4">
                     <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
                         Turnos
@@ -42,7 +44,7 @@ export default async function AdminPage({ searchParams }: Props) {
 
             <div className="flex flex-col gap-6">
                 <div className="flex flex-col gap-4 rounded-[2rem] border border-[#d8cabd] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
-                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82] border-b border-[#d8cabd] pb-2">
                         Servicios disponibles
                     </p>
                     <ServicesList />
