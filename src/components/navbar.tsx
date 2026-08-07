@@ -1,16 +1,13 @@
-"use client";
-
 import Link from "next/link";
 import { FaUserCircle } from "react-icons/fa";
-import { useAuth } from "@/app/_context/auth-provider";
-import Button from "@/components/button";
+import { createClient } from "@/lib/supabase/server";
+import { cookies } from "next/headers";
+import LogoutButton from "./logout-button";
 
-export default function Navbar() {
-    const { user, logout } = useAuth();
-
-    async function handleLogout() {
-        await logout();
-    }
+export default async function Navbar() {
+    const cookieStore = await cookies();
+    const supabase = await createClient(cookieStore);
+    const { data: { user } } = await supabase.auth.getUser();
 
     return (
         <nav className="fixed inset-x-0 top-0 z-50 border-b border-[#d8ccb9]/80 bg-[#f6f1e8]/90 backdrop-blur-xl">
@@ -25,9 +22,7 @@ export default function Navbar() {
                         <Link href="/admin" className="rounded-full bg-[#b56b49] px-4 py-2.5 text-sm font-semibold text-[#fff8f1] transition hover:bg-[#a95f40]">
                             Admin
                         </Link>
-                        <Button variant="secondary" size="small" onClick={handleLogout}>
-                            Logout
-                        </Button>
+                        <LogoutButton />
                     </div>
                 ) : (
                     <Link href="/login" className="text-sm font-medium">
