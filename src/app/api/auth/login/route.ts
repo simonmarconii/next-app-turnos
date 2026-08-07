@@ -14,9 +14,15 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
-        status: 401,
-      });
+      if (error.status === 400) {
+        return new Response(JSON.stringify({ error: "Email o contraseña incorrectos" }), {
+          status: 400,
+        })
+      } else if (error.status === 500) {
+        return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
+          status: 500,
+        })
+      }
     }
 
     return new Response(

@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     }
 }
 
-type CluseType = {
+type ClauseType = {
     date: {
         gte?: Date;
         lt?: Date;
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get("search_dates") || "upcoming";
 
-    let clause: CluseType = {
+    let clause: ClauseType = {
         date: {
             gte: new Date()
         }
