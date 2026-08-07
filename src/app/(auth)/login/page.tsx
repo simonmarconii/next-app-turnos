@@ -1,8 +1,8 @@
 "use client";
 
-import { useAuth } from "@/app/_context/auth-provider";
 import Button from "@/components/button";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 type FormData = {
     email: string;
@@ -16,8 +16,9 @@ const initialFormData: FormData = {
 
 export default function LoginPage() {
     const [formData, setFormData] = useState(initialFormData);
+    const [error, setError] = useState<string | null>(null);
 
-    const { login } = useAuth();
+    const router = useRouter();
 
     function updateField(field: keyof FormData, value: string) {
         setFormData((current) => ({ ...current, [field]: value }));
@@ -25,21 +26,37 @@ export default function LoginPage() {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        setError(null);
 
         if (!formData.email || !formData.password) {
             return;
         }
 
         try {
-            await login(formData.email, formData.password);
+            const response = await fetch("/api/auth/login", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formData),
+            })
+
+            if (!response.ok) {
+                const data = await response.json();
+                setError(data.error);
+            }
+
+            router.push("/admin");
+            router.refresh();
         } catch (error) {
             console.error("Error submitting form:", error);
+            setError("Error al enviar el formulario");
         }
     }
 
     return (
         <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
-            <div className="overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur">
+            <div className={`overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
                 <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                     <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#1f1a16] sm:text-4xl">
                         Mis turnos
@@ -58,7 +75,7 @@ export default function LoginPage() {
                                     type="email"
                                     value={formData.email}
                                     onChange={(event) => updateField("email", event.target.value)}
-                                    className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                    className={`rounded-2xl ${error ? "border-2 border-red-600" : "border border-[#d8cabd]"} bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
@@ -71,7 +88,7 @@ export default function LoginPage() {
                                     type="password"
                                     value={formData.password}
                                     onChange={(event) => updateField("password", event.target.value)}
-                                    className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                    className={`rounded-2xl border ${error ? "border-2 border-red-600" : "border border-[#d8cabd]"} bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
                                 />
                             </div>
                         </div>
@@ -81,6 +98,11 @@ export default function LoginPage() {
                             </Button>
                         </div>
                     </section>
+                    {error && (
+                        <div className="px-6 pb-4 text-lg text-red-600 sm:px-8">
+                            {error}
+                        </div>
+                    )}
                 </form>
             </div>
         </main>
