@@ -3,30 +3,64 @@
 import { useState, FormEvent } from "react";
 import Button from "./button";
 import { ServiceType } from "@/types/service";
-import { useService } from "@/app/_context/service-provider";
+import { useRouter } from "next/navigation";
 
 interface ServicesClientProps {
   initialServices: ServiceType[];
 }
 
-export default function ServicesClient({ initialServices }: ServicesClientProps) {
+export default function ServicesClient({
+  initialServices,
+}: ServicesClientProps) {
   const [editingService, setEditingService] = useState<ServiceType | null>(null);
-  const [deletingService, setDeletingService] = useState<ServiceType | null>(null);
+  const [deletingService, setDeletingService] = useState<ServiceType | null>( null);
   const [editForm, setEditForm] = useState({ price: 0 });
 
-  // Puedes usar las acciones desde tu context o Server Actions
-  const { deleteService, updateService } = useService();
+  const router = useRouter();
 
   async function handleDeleteService(serviceId: string) {
-    await deleteService(serviceId);
-    setDeletingService(null);
+    try {
+      const response = await fetch(`/api/service/${serviceId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete service");
+      }
+
+      setDeletingService(null);
+      router.refresh();
+    } catch (error) {
+      throw new Error("Failed to delete service: " + error);
+    }
   }
 
   async function handleUpdateService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingService) return;
-    await updateService(editingService, editForm.price);
-    setEditingService(null);
+    try {
+      const response = await fetch(`/api/service/${editingService.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          price: editForm.price,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update service");
+      }
+
+      setEditingService(null);
+      router.refresh();
+    } catch (error) {
+      throw new Error("Failed to update service: " + error);
+    }
   }
 
   return (
@@ -39,7 +73,9 @@ export default function ServicesClient({ initialServices }: ServicesClientProps)
               className="flex flex-col gap-4 rounded-2xl border border-[#d8cabd] bg-white p-4 shadow-sm"
             >
               <div>
-                <p className="text-base font-semibold text-[#1f1a16]">{service.name}</p>
+                <p className="text-base font-semibold text-[#1f1a16]">
+                  {service.name}
+                </p>
                 <p className="mt-1 text-sm text-[#4d4037]">${service.price}</p>
               </div>
               <div className="flex justify-end gap-4">
@@ -64,7 +100,6 @@ export default function ServicesClient({ initialServices }: ServicesClientProps)
           ))}
       </div>
 
-      {/* Modal de Edición */}
       {editingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
           <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
@@ -81,16 +116,27 @@ export default function ServicesClient({ initialServices }: ServicesClientProps)
 
             <form className="mt-6 space-y-5" onSubmit={handleUpdateService}>
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#4d4037]">Precio</label>
+                <label className="text-sm font-semibold text-[#4d4037]">
+                  Precio
+                </label>
                 <input
                   type="number"
                   value={editForm.price}
-                  onChange={(e) => setEditForm({ ...editForm, price: parseFloat(e.target.value) })}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      price: parseFloat(e.target.value),
+                    })
+                  }
                   className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                 />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <Button onClick={() => setEditingService(null)} variant="outline" size="medium">
+                <Button
+                  onClick={() => setEditingService(null)}
+                  variant="outline"
+                  size="medium"
+                >
                   Cancelar
                 </Button>
                 <Button type="submit" size="medium">
@@ -102,7 +148,6 @@ export default function ServicesClient({ initialServices }: ServicesClientProps)
         </div>
       )}
 
-      {/* Modal de Eliminación */}
       {deletingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
           <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
@@ -118,7 +163,11 @@ export default function ServicesClient({ initialServices }: ServicesClientProps)
                 </div>
               </div>
               <div className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center">
-                <Button onClick={() => setDeletingService(null)} variant="outline" size="medium">
+                <Button
+                  onClick={() => setDeletingService(null)}
+                  variant="outline"
+                  size="medium"
+                >
                   Cancelar
                 </Button>
                 <Button
