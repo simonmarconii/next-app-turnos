@@ -14,7 +14,7 @@ function DateCard({ date }: Props) {
                 Dia:
             </p>
             <p className="text-sm font-medium text-[#1f1a16]">
-                {new Date(date.date).toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric" })}
+                {new Date(date.date).toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}
             </p>
         </div>
         <div className="flex items-center gap-2">
@@ -22,7 +22,7 @@ function DateCard({ date }: Props) {
                 Hora:
             </p>
             <p className="text-sm font-medium text-[#1f1a16]">
-                {new Date(date.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
+                {new Date(date.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
             </p>
         </div>
         <div className="flex items-center gap-2">

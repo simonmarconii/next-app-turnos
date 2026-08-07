@@ -18,8 +18,8 @@ export default async function DatesList({ datesQuery }: Props) {
     const dates = await response.json();
 
     return (
-        <div className="flex flex-col gap-2">
-            <div className="flex justify-end">
+        <div className="space-y-3">
+            <div className="flex justify-end border-b border-[#d8cabd] pb-2">
                 <FilterBar />
             </div>
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
