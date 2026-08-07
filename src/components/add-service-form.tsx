@@ -1,23 +1,40 @@
 "use client";
 
-import { useService } from "@/app/_context/service-provider";
 import { FormEvent, useState } from "react";
 import Button from "./button";
+import { useRouter } from "next/navigation";
 
 export default function AddServiceForm() {
     const [newService, setNewService] = useState({ name: "", price: 0 });
 
-    const { addService, error } = useService();
+    const router = useRouter();
 
     async function handleAddService(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!newService) return;
-        await addService(newService);
+
+        try {
+            const response = await fetch("/api/service", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(newService),
+            });
+
+            if (!response.ok) {
+                throw new Error("Error al agregar el servicio");
+            }
+
+            router.refresh();
+        } catch (error) {
+            throw new Error("Error al agregar el servicio" + error);
+        }
     }
 
     return (
-        <div className={`flex flex-col gap-4 rounded-[2rem] border ${ error ? "border-[#b56b49]" : "border-[#d8cabd]"} bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.05)] sm:p-8`}>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+        <div className={`flex flex-col gap-4 rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.05)] sm:p-8`}>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82] border-b border-[#d8cabd] pb-2">
                 Agregar nuevo servicio
             </p>
             <form className="space-y-6" onSubmit={handleAddService}>
@@ -48,7 +65,6 @@ export default function AddServiceForm() {
                         Agregar
                     </Button>
                 </div>
-                {error && <p className="text-sm text-[#b56b49]">{error}</p>}
             </form>
         </div>
     )
