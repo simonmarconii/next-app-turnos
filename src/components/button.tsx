@@ -9,6 +9,7 @@ type ButtonProps = {
     size?: ButtonSize;
     type?: "button" | "submit" | "reset";
     disabled?: boolean;
+    className?: string;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -24,9 +25,9 @@ const sizeStyles: Record<ButtonSize, string> = {
     large: "px-7 py-4 text-lg"
 }
 
-export default function Button({ children, onClick, variant = "primary", size = "medium", type = "button", disabled }: ButtonProps) {
+export default function Button({ children, onClick, variant = "primary", size = "medium", type = "button", disabled, className }: ButtonProps) {
     return (
-        <button type={type} disabled={disabled} className={`rounded-full font-semibold ${variantStyles[variant]} ${sizeStyles[size]} ${disabled ? 'cursor-not-allowed' : ''}`} onClick={onClick}>
+        <button type={type} disabled={disabled} className={`${className} rounded-full font-semibold ${variantStyles[variant]} ${sizeStyles[size]} ${disabled ? 'cursor-not-allowed' : ''}`} onClick={onClick}>
             {children}
         </button>
     );
