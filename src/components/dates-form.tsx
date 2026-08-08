@@ -4,8 +4,12 @@ import { DateType } from '@/types/date';
 import { ServiceType } from '@/types/service';
 import React, { useMemo, useState } from 'react'
 import Button from './button';
+import { MdOutlinePayment } from "react-icons/md";
+import { IoIosCheckmarkCircle } from "react-icons/io";
+import { MdStorefront } from "react-icons/md";
 
 type FormData = {
+    paymentMethod: string;
     serviceId: string;
     date: string;
     time: string;
@@ -16,6 +20,7 @@ type FormData = {
 };
 
 const initialFormData: FormData = {
+    paymentMethod: "",
     serviceId: "",
     date: "",
     time: "",
@@ -120,11 +125,18 @@ function DatesForm({ services, dates }: Props) {
         setStep(3);
     }
 
+    function handleThirdStepNext() {
+        if (!formData.name || !formData.lastname || !formData.email || !formData.phone) {
+            return;
+        }
+        setStep(4);
+    }
+
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         setError(null);
 
-        if (!formData.serviceId || !formData.date || !formData.time || !formData.name || !formData.lastname || !formData.email || !formData.phone) {
+        if (!formData.paymentMethod) {
             return;
         }
 
@@ -137,7 +149,7 @@ function DatesForm({ services, dates }: Props) {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify(formData),
-            })
+            });
 
             if (!scheduleResponse.ok) {
                 const data = await scheduleResponse.json();
@@ -164,8 +176,6 @@ function DatesForm({ services, dates }: Props) {
                     setError(data.message || "Error al enviar el correo de confirmación");
                     throw new Error(data.message || "Error al enviar el correo de confirmación");
                 }
-
-                setIsSubmitted(true);
             }
 
         } catch (error) {
@@ -333,7 +343,7 @@ function DatesForm({ services, dates }: Props) {
                                     </Button>
                                 </div>
                             </section>
-                        ) : (
+                        ) : step === 3 ? (
                             <section className="grid gap-6">
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <div className="grid gap-2">
@@ -399,11 +409,86 @@ function DatesForm({ services, dates }: Props) {
                                     <Button onClick={() => setStep(2)} variant="outline">
                                         Volver
                                     </Button>
-                                    <Button type="submit" variant="primary" disabled={loading}>
-                                        {loading ? "Procesando..." : "Confirmar turno"}
+                                    <Button
+                                        onClick={handleThirdStepNext}
+                                        disabled={!formData.date || !formData.time || isDayFull}
+                                    >
+                                        Siguiente
                                     </Button>
                                 </div>
-                                {error && <p className="text-lg text-red-600">{error}</p>}
+                            </section>
+                        ) : (
+                            <section className="grid gap-6">
+                                <div className="grid gap-2">
+                                    <h2 className="text-2xl font-semibold">Resumen</h2>
+                                    <div className="grid gap-2 lg:grid-cols-2">
+                                        <div>
+                                            <p className="text-[#907968]">
+                                                Cliente
+                                            </p>
+                                            <p className="font-medium">
+                                                {formData.name} {formData.lastname}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[#907968]">
+                                                Servicio
+                                            </p>
+                                            <p className="font-medium">
+                                                { selectedService?.name }
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[#907968]">
+                                                Fecha y hora
+                                            </p>
+                                            <p className="font-medium">
+                                                {formData.date}, {formData.time}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-[#907968]">
+                                                Valor
+                                            </p>
+                                            <p className="font-medium">
+                                                ${ selectedService?.price }
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="grid gap-2">
+                                    <div>
+                                        <h2 className="text-2xl font-semibold">Elegir método de pago</h2>
+                                    </div>
+                                    <div className="flex flex-col gap-2 lg:gap-4 sm:justify-start sm:flex-row sm:items-center">
+                                        <Button variant={`${formData.paymentMethod === "efectivo" ? "primary" : "outline"}`} onClick={() => updateField("paymentMethod", "efectivo")}>
+                                            <div className="flex justify-between gap-2 items-center">
+                                                <div className="flex gap-2 items-center">
+                                                    <MdOutlinePayment className="text-xl" />
+                                                    <p>Pago en el lugar</p>
+                                                </div>
+                                                {formData.paymentMethod === "efectivo" && <IoIosCheckmarkCircle className="text-xl" />}
+                                            </div>
+                                        </Button>
+                                        <Button variant={`${formData.paymentMethod === "transferencia" ? "primary" : "outline"}`} onClick={() => updateField("paymentMethod", "transferencia")}>
+                                            <div className="flex justify-between gap-2 items-center">
+                                                <div className="flex gap-2 items-center">
+                                                    <MdStorefront className="text-xl" />
+                                                    <p>Mercado Pago</p>
+                                                </div>
+                                                {formData.paymentMethod === "transferencia" && <IoIosCheckmarkCircle className="text-xl" />}
+                                            </div>
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between"> 
+                                    <Button onClick={() => setStep(3)} variant="outline">
+                                        Volver
+                                    </Button>
+                                    <Button type="submit" variant="primary" disabled={loading}>
+                                        {loading ? "Solicitando turno..." : "Solicitar turno"}
+                                    </Button>
+                                </div>
                             </section>
                         )}
                     </form>
