@@ -15,7 +15,6 @@ export async function POST(request: Request) {
     }
 
     try {
-        // Con el email de prueba de resend solo se puede enviar a un email verificado, por eso se usa el email de prueba.
         const { data, error } = await resend.emails.send({
             from: process.env.EMAIL_FROM!,
             to: [email],
@@ -43,9 +42,8 @@ export async function POST(request: Request) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        console.error("Error sending email:", error);
-
-        return new Response(JSON.stringify({error: "An error occurred while sending the email."}), {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({error: errorMessage}), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })

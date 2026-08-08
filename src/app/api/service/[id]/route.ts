@@ -19,7 +19,8 @@ export async function DELETE(request: Request, context: RouteParams) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        return new Response(JSON.stringify({ error }), {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
@@ -47,7 +48,8 @@ export async function PUT(request: Request, context: RouteParams) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        return new Response(JSON.stringify({ error }), {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })

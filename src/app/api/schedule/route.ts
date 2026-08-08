@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     const realDate = new Date(date + "T" + time + ":00.000Z");
 
     try {
-        let user = await prisma.user.findUnique({
+        let user = await prisma.user.findFirst({
             where: {
                 email: email
             }
@@ -39,7 +39,8 @@ export async function POST(request: Request) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        return new Response(JSON.stringify({ error }), {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
         });
 
         if (!schedules) {
-            return new Response(JSON.stringify({ error: "No schedules found" }), {
+            return new Response(JSON.stringify({ error: "Schedules not found" }), {
                 status: 404,
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -94,7 +95,8 @@ export async function GET(request: NextRequest) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        return new Response(JSON.stringify({ error }), {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        return new Response(JSON.stringify({ error: errorMessage }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
