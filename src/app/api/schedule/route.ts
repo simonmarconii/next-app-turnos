@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 export async function POST(request: Request) {
     const body = await request.json();
 
-    const {name, lastname, email, phone, date, time, serviceId} = body;
+    const {name, lastname, email, phone, date, time, serviceId, paymentMethod} = body;
 
     const realDate = new Date(date + "T" + time + ":00.000Z");
 
@@ -31,10 +31,24 @@ export async function POST(request: Request) {
                 date: realDate,
                 user_id: user.id,
                 service_id: serviceId
+            },
+            include: {
+                service: true
+            }
+        })
+
+        const newPayment = await prisma.payment.create({
+            data: {
+                schedule_id: newSchedule.id,
+                amount: newSchedule.service.price,
+                payment_method: paymentMethod
+            }, 
+            include: {
+                schedule: true
             }
         })
     
-        return new Response(JSON.stringify({data: newSchedule}), {
+        return new Response(JSON.stringify({data: newPayment}), {
             status: 201,
             headers: { 'Content-Type': 'application/json' }
         })
