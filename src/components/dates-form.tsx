@@ -2,11 +2,12 @@
 
 import { DateType } from '@/types/date';
 import { ServiceType } from '@/types/service';
-import React, { useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import Button from './button';
 import { MdOutlinePayment } from "react-icons/md";
 import { IoIosCheckmarkCircle } from "react-icons/io";
 import { MdStorefront } from "react-icons/md";
+import Select from './select';
 
 type FormData = {
     paymentMethod: string;
@@ -38,11 +39,20 @@ const timeSlots = [
     "17:00",
 ];
 
+const STEPS = ["Elegir servicio", "Elegir turno", "Tus datos", "Resumen"];
+
 function splitDateTime(raw: string) {
     const normalized = raw.replace("T", " ");
     const [datePart, timePart = ""] = normalized.split(" ");
     const time = timePart.slice(0, 5);
     return { datePart, time };
+}
+
+type ErrorsType = {
+    stepOne?: string;
+    stepTwo?: string;
+    stepThree?: string;
+    stepFour?: string;
 }
 
 type Props = {
@@ -51,12 +61,10 @@ type Props = {
 }
 
 function DatesForm({ services, dates }: Props) {
-    const [step, setStep] = useState(1);
-    const [formData, setFormData] = useState(initialFormData);
-    const [isSubmitted, setIsSubmitted] = useState(false);
-    const [dateError, setDateError] = useState("");
+    const [step, setStep] = useState(0);
+    const [formData, setFormData] = useState(initialFormData);;
+    const [errors, setErrors] = useState<ErrorsType>({});
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
     const selectedService = useMemo(() => {
         return services.find((service) => service.id === formData.serviceId);
@@ -81,18 +89,15 @@ function DatesForm({ services, dates }: Props) {
     }
 
     function handleServiceChange(value: string) {
-        setDateError("");
         setFormData((current) => ({
             ...current,
             serviceId: value,
             date: "",
             time: "",
         }));
-        setStep(1);
     }
 
     function handleDateChange(value: string) {
-        setDateError("");
         const bookedForThatDay = dates
             .map((d) => splitDateTime(d.date))
             .filter((d) => d.datePart === value)
@@ -100,7 +105,7 @@ function DatesForm({ services, dates }: Props) {
         const stillAvailable = timeSlots.filter((slot) => !bookedForThatDay.includes(slot));
 
         if (value && stillAvailable.length === 0) {
-            setDateError("No quedan turnos disponibles para ese día. Elegí otra fecha.");
+            setErrors((current) => ({ ...current, stepTwo: "No hay horarios disponibles para la fecha seleccionada." }));
             setFormData((current) => ({ ...current, date: value, time: "" }));
             return;
         }
@@ -108,38 +113,42 @@ function DatesForm({ services, dates }: Props) {
         setFormData((current) => ({ ...current, date: value, time: "" }));
     }
 
-    function handleFirstStepNext() {
-        if (!formData.serviceId) {
-            return;
+    function validateStep() {
+        const newErrors: ErrorsType = {};
+
+        if (step === 0) {
+            if (!formData.serviceId) newErrors.stepOne = "Por favor, seleccioná un servicio.";
         }
-        setStep(2);
+
+        if (step === 1) {
+            if (!formData.date || !formData.time) newErrors.stepTwo = "Por favor, seleccioná una fecha y un horario.";
+        }
+
+        if (step === 2) {
+            if (!formData.name || !formData.lastname || !formData.email || !formData.phone) newErrors.stepThree = "Por favor, completá todos los campos.";
+        }
+
+        if (step === 3) {
+            if (!formData.paymentMethod) newErrors.stepFour = "Por favor, seleccioná un método de pago.";
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
     }
 
-    function handleSecondStepNext() {
-        if (!formData.date || !formData.time) {
-            return;
-        }
-        if (isDayFull) {
-            return;
-        }
-        setStep(3);
+    function next() {
+        if (validateStep()) setStep((s) => Math.min(s + 1, STEPS.length - 1));
     }
 
-    function handleThirdStepNext() {
-        if (!formData.name || !formData.lastname || !formData.email || !formData.phone) {
-            return;
-        }
-        setStep(4);
+    function back() {
+        setStep((s) => Math.max(s - 1, 0));
     }
 
-    async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        setError(null);
-
-        if (!formData.paymentMethod) {
+    async function handleSubmit() {
+        if (!validateStep()) {
+            console.log("Errores de validación");
             return;
         }
-
         setLoading(true);
 
         try {
@@ -153,7 +162,6 @@ function DatesForm({ services, dates }: Props) {
 
             if (!scheduleResponse.ok) {
                 const data = await scheduleResponse.json();
-                setError(data.message || "Error al solicitar el turno");
                 throw new Error(data.message || "Error al solicitar el turno");
             } else {
                 const emailResponse = await fetch("/api/send", {
@@ -173,13 +181,10 @@ function DatesForm({ services, dates }: Props) {
     
                 if (!emailResponse.ok) {
                     const data = await emailResponse.json();
-                    setError(data.message || "Error al enviar el correo de confirmación");
                     throw new Error(data.message || "Error al enviar el correo de confirmación");
                 }
             }
-
         } catch (error) {
-            setError("Error al solicitar el turno: " + error);
             throw new Error("Error al solicitar el turno: " + error);
         } finally {
             setLoading(false);
@@ -188,7 +193,7 @@ function DatesForm({ services, dates }: Props) {
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
-        <div className={`overflow-hidden rounded-[2rem] ${ error ? "border-2 border-red-600" : "border border-[#cdbfae]"} bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
+        <div className={`overflow-hidden rounded-[2rem] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
             <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                 <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">
                     Turnos
@@ -199,69 +204,32 @@ function DatesForm({ services, dates }: Props) {
             </div>
 
             <div className="px-6 py-8 sm:px-8">
-                <div className="mb-8 flex items-center gap-3 text-sm font-medium text-[#6a5a4d]">
-                    <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full border ${
-                            step === 1
-                                ? "border-[#b56b49] bg-[#b56b49] text-white"
-                                : "border-[#b56b49] bg-white text-[#b56b49]"
-                        }`}
-                    >
-                        1
-                    </div>
-                    <span className={step === 1 ? "text-[#1f1a16]" : ""}>Elegir servicio</span>
-                    <div className="h-px flex-1 bg-[#e3d6ca]" />
-                    <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full border ${
-                            step === 2
-                                ? "border-[#b56b49] bg-[#b56b49] text-white"
-                                : "border-[#d9c8b8] bg-white text-[#907968]"
-                        }`}
-                    >
-                        2
-                    </div>
-                    <span className={step === 2 ? "text-[#1f1a16]" : "text-[#907968]"}>
-                        Elegir turno
-                    </span>
-                    <div className="h-px flex-1 bg-[#e3d6ca]" />
-                    <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full border ${
-                            step === 3
-                                ? "border-[#b56b49] bg-[#b56b49] text-white"
-                                : "border-[#d9c8b8] bg-white text-[#907968]"
-                        }`}
-                    >
-                        3
-                    </div>
-                    <span className={step === 3 ? "text-[#1f1a16]" : "text-[#907968]"}>
-                        Tus datos
-                    </span>
+                <div className="mb-6 flex flex-col gap-4 flex-row sm:items-start">
+                    {STEPS.map((label, index) => (
+                        <div key={index} className="flex flex-1 flex-col items-center text-center">
+                            <div
+                                className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${index <= step ? "bg-[#b56b49] text-white" : "bg-[#e6d7c8] text-[#4d4037]"}`}
+                            >
+                                {index + 1}
+                            </div>
+                            <span className={`mt-2 text-sm ${index === step ? "text-[#b56b49]" : "text-[#4d4037]"}`}>{label}</span>
+                        </div>
+                    ))}
                 </div>
-
-                {isSubmitted ? (
-                    <section className="rounded-2xl border border-[#cfe0d5] bg-[#f3faf5] p-6 text-[#234034]">
-                        <h2 className="text-2xl font-semibold">Tu turno fue solicitado</h2>
-                        <p className="mt-3 leading-7">
-                            {formData.name} {formData.lastname}, te esperamos el {formData.date} a las {formData.time}!.
-                        </p>
-                        <p className="mt-3 text-sm text-[#4f695a]">
-                            Teléfono: {formData.phone}
-                        </p>
-                    </section>
-                ) : (
-                    <form className="space-y-8" onSubmit={handleSubmit}>
-                        {step === 1 ? (
-                            <section className="grid gap-6">
-                                <div className="grid gap-2">
-                                    <label htmlFor="serviceId" className="text-sm font-medium text-[#4d4037]">
-                                        Servicio
-                                    </label>
+                <div className="space-y-8">
+                    {step === 0 ? (
+                        <section className="grid gap-6">
+                            <div className="grid gap-2">
+                                <label htmlFor="serviceId" className="text-sm font-medium text-[#4d4037]">
+                                    Servicio
+                                </label>
+                                <Select>
                                     <select
                                         id="serviceId"
                                         name="serviceId"
                                         value={formData.serviceId}
                                         onChange={(event) => handleServiceChange(event.target.value)}
-                                        className="rounded-2xl border border-[#d8cabd] bg-white appearance-none px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                        className="block w-full appearance-none bg-transparent pr-8 outline-none"
                                     >
                                         <option value="">Elegí un servicio</option>
                                         {services.map((service) => (
@@ -270,50 +238,38 @@ function DatesForm({ services, dates }: Props) {
                                             </option>
                                         ))}
                                     </select>
-                                </div>
+                                </Select>
+                                {errors.stepOne && <p className="text-md text-red-600">{errors.stepOne}</p>}
+                            </div>
+                        </section>
+                    ) : step === 1 ? (
+                        <section className="grid gap-6">
+                            <div className="grid gap-2">
+                                <label htmlFor="date" className="text-sm font-medium text-[#4d4037]">
+                                    Fecha
+                                </label>
+                                <input
+                                    id="date"
+                                    name="date"
+                                    type="date"
+                                    value={formData.date}
+                                    onChange={(event) => handleDateChange(event.target.value)}
+                                    className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                />
+                            </div>
 
-                                <div className="flex justify-end">
-                                    <Button 
-                                        onClick={handleFirstStepNext}
-                                        disabled={!formData.serviceId}
-                                        variant="primary"
-                                    >
-                                        Siguiente
-                                    </Button>
-                                </div>
-                            </section>
-                        ) : step === 2 ? (
-                            <section className="grid gap-6">
-                                <div className="grid gap-2">
-                                    <label htmlFor="date" className="text-sm font-medium text-[#4d4037]">
-                                        Fecha
-                                    </label>
-                                    <input
-                                        id="date"
-                                        name="date"
-                                        type="date"
-                                        value={formData.date}
-                                        onChange={(event) => handleDateChange(event.target.value)}
-                                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
-                                    />
-                                    {dateError && (
-                                        <p className="text-sm font-medium text-[#b3412c]">
-                                            {dateError}
-                                        </p>
-                                    )}
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <label htmlFor="time" className="text-sm font-medium text-[#4d4037]">
-                                        Horario
-                                    </label>
+                            <div className="grid gap-2">
+                                <label htmlFor="time" className="text-sm font-medium text-[#4d4037]">
+                                    Horario
+                                </label>
+                                <Select>
                                     <select
                                         id="time"
                                         name="time"
                                         value={formData.time}
                                         onChange={(event) => updateField("time", event.target.value)}
                                         disabled={!formData.date || isDayFull}
-                                        className="rounded-2xl border border-[#d8cabd] bg-white appearance-none px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                        className="block w-full appearance-none bg-transparent pr-8 outline-none"
                                     >
                                         <option value="">Elegí un horario</option>
                                         {timeSlots.map((timeSlot) => {
@@ -329,170 +285,162 @@ function DatesForm({ services, dates }: Props) {
                                             );
                                         })}
                                     </select>
-                                </div>
-
-                                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                                    <Button onClick={() => setStep(1)} variant="outline">
-                                        Volver
-                                    </Button>
-                                    <Button
-                                        onClick={handleSecondStepNext}
-                                        disabled={!formData.date || !formData.time || isDayFull}
-                                    >
-                                        Siguiente
-                                    </Button>
-                                </div>
-                            </section>
-                        ) : step === 3 ? (
-                            <section className="grid gap-6">
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="grid gap-2">
-                                        <label htmlFor="name" className="text-sm font-medium text-[#4d4037]">
-                                            Nombre
-                                        </label>
-                                        <input
-                                            id="name"
-                                            name="name"
-                                            type="text"
-                                            value={formData.name}
-                                            onChange={(event) => updateField("name", event.target.value)}
-                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <label htmlFor="lastName" className="text-sm font-medium text-[#4d4037]">
-                                            Apellido
-                                        </label>
-                                        <input
-                                            id="lastName"
-                                            name="lastname"
-                                            type="text"
-                                            value={formData.lastname}
-                                            onChange={(event) => updateField("lastname", event.target.value)}
-                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid gap-4 sm:grid-cols-2">
-                                    <div className="grid gap-2">
-                                        <label htmlFor="email" className="text-sm font-medium text-[#4d4037]">
-                                            Email
-                                        </label>
-                                        <input
-                                            id="email"
-                                            name="email"
-                                            type="email"
-                                            value={formData.email}
-                                            onChange={(event) => updateField("email", event.target.value)}
-                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
-                                        />
-                                    </div>
-
-                                    <div className="grid gap-2">
-                                        <label htmlFor="phone" className="text-sm font-medium text-[#4d4037]">
-                                            Teléfono
-                                        </label>
-                                        <input
-                                            id="phone"
-                                            name="phone"
-                                            type="tel"
-                                            value={formData.phone}
-                                            onChange={(event) => updateField("phone", event.target.value)}
-                                            className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                                    <Button onClick={() => setStep(2)} variant="outline">
-                                        Volver
-                                    </Button>
-                                    <Button
-                                        onClick={handleThirdStepNext}
-                                        disabled={!formData.date || !formData.time || isDayFull}
-                                    >
-                                        Siguiente
-                                    </Button>
-                                </div>
-                            </section>
-                        ) : (
-                            <section className="grid gap-6">
+                                </Select>
+                            </div>
+                            {errors.stepTwo && <p className="text-md text-red-600">{errors.stepTwo}</p>}
+                        </section>
+                    ) : step === 2 ? (
+                        <section className="grid gap-6">
+                            <div className="grid gap-4 sm:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <h2 className="text-2xl font-semibold">Resumen</h2>
-                                    <div className="grid gap-2 lg:grid-cols-2">
-                                        <div>
-                                            <p className="text-[#907968]">
-                                                Cliente
-                                            </p>
-                                            <p className="font-medium">
-                                                {formData.name} {formData.lastname}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[#907968]">
-                                                Servicio
-                                            </p>
-                                            <p className="font-medium">
-                                                { selectedService?.name }
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[#907968]">
-                                                Fecha y hora
-                                            </p>
-                                            <p className="font-medium">
-                                                {formData.date}, {formData.time}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[#907968]">
-                                                Valor
-                                            </p>
-                                            <p className="font-medium">
-                                                ${ selectedService?.price }
-                                            </p>
-                                        </div>
-                                    </div>
+                                    <label htmlFor="name" className="text-sm font-medium text-[#4d4037]">
+                                        Nombre
+                                    </label>
+                                    <input
+                                        id="name"
+                                        name="name"
+                                        type="text"
+                                        value={formData.name}
+                                        onChange={(event) => updateField("name", event.target.value)}
+                                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                    />
                                 </div>
+
                                 <div className="grid gap-2">
+                                    <label htmlFor="lastName" className="text-sm font-medium text-[#4d4037]">
+                                        Apellido
+                                    </label>
+                                    <input
+                                        id="lastName"
+                                        name="lastname"
+                                        type="text"
+                                        value={formData.lastname}
+                                        onChange={(event) => updateField("lastname", event.target.value)}
+                                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="grid gap-2">
+                                    <label htmlFor="email" className="text-sm font-medium text-[#4d4037]">
+                                        Email
+                                    </label>
+                                    <input
+                                        id="email"
+                                        name="email"
+                                        type="email"
+                                        value={formData.email}
+                                        onChange={(event) => updateField("email", event.target.value)}
+                                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                    />
+                                </div>
+
+                                <div className="grid gap-2">
+                                    <label htmlFor="phone" className="text-sm font-medium text-[#4d4037]">
+                                        Teléfono
+                                    </label>
+                                    <input
+                                        id="phone"
+                                        name="phone"
+                                        type="tel"
+                                        value={formData.phone}
+                                        onChange={(event) => updateField("phone", event.target.value)}
+                                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                    />
+                                </div>
+                            </div>
+                            {errors.stepThree && <p className="text-md text-red-600">{errors.stepThree}</p>}
+                        </section>
+                    ) : (
+                        <section className="grid gap-6">
+                            <div className="grid gap-2">
+                                <h2 className="text-2xl font-semibold">Resumen</h2>
+                                <div className="grid gap-2 lg:grid-cols-2">
                                     <div>
-                                        <h2 className="text-2xl font-semibold">Elegir método de pago</h2>
+                                        <p className="text-[#907968]">
+                                            Cliente
+                                        </p>
+                                        <p className="font-medium">
+                                            {formData.name} {formData.lastname}
+                                        </p>
                                     </div>
-                                    <div className="flex flex-col gap-2 lg:gap-4 sm:justify-start sm:flex-row sm:items-center">
-                                        <Button variant={`${formData.paymentMethod === "efectivo" ? "primary" : "outline"}`} onClick={() => updateField("paymentMethod", "efectivo")}>
-                                            <div className="flex justify-between gap-2 items-center">
-                                                <div className="flex gap-2 items-center">
-                                                    <MdOutlinePayment className="text-xl" />
-                                                    <p>Pago en el lugar</p>
-                                                </div>
-                                                {formData.paymentMethod === "efectivo" && <IoIosCheckmarkCircle className="text-xl" />}
-                                            </div>
-                                        </Button>
-                                        <Button variant={`${formData.paymentMethod === "transferencia" ? "primary" : "outline"}`} onClick={() => updateField("paymentMethod", "transferencia")}>
-                                            <div className="flex justify-between gap-2 items-center">
-                                                <div className="flex gap-2 items-center">
-                                                    <MdStorefront className="text-xl" />
-                                                    <p>Mercado Pago</p>
-                                                </div>
-                                                {formData.paymentMethod === "transferencia" && <IoIosCheckmarkCircle className="text-xl" />}
-                                            </div>
-                                        </Button>
+                                    <div>
+                                        <p className="text-[#907968]">
+                                            Servicio
+                                        </p>
+                                        <p className="font-medium">
+                                            { selectedService?.name }
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[#907968]">
+                                            Fecha y hora
+                                        </p>
+                                        <p className="font-medium">
+                                            {formData.date}, {formData.time}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[#907968]">
+                                            Valor
+                                        </p>
+                                        <p className="font-medium">
+                                            ${ selectedService?.price }
+                                        </p>
                                     </div>
                                 </div>
-                                <div className="flex flex-col gap-3 sm:flex-row sm:justify-between"> 
-                                    <Button onClick={() => setStep(3)} variant="outline">
-                                        Volver
+                            </div>
+                            <div className="grid gap-2">
+                                <div>
+                                    <h2 className="text-2xl font-semibold">Elegir método de pago</h2>
+                                </div>
+                                <div className="flex flex-col gap-2 lg:gap-4 sm:justify-start sm:flex-row sm:items-center">
+                                    <Button variant={`${formData.paymentMethod === "efectivo" ? "primary" : "outline"}`} onClick={() => updateField("paymentMethod", "efectivo")}>
+                                        <div className="flex justify-between gap-2 items-center">
+                                            <div className="flex gap-2 items-center">
+                                                <MdOutlinePayment className="text-xl" />
+                                                <p>Pago en el lugar</p>
+                                            </div>
+                                            {formData.paymentMethod === "efectivo" && <IoIosCheckmarkCircle className="text-xl" />}
+                                        </div>
                                     </Button>
-                                    <Button type="submit" variant="primary" disabled={loading}>
-                                        {loading ? "Solicitando turno..." : "Solicitar turno"}
+                                    <Button variant={`${formData.paymentMethod === "transferencia" ? "primary" : "outline"}`} onClick={() => updateField("paymentMethod", "transferencia")}>
+                                        <div className="flex justify-between gap-2 items-center">
+                                            <div className="flex gap-2 items-center">
+                                                <MdStorefront className="text-xl" />
+                                                <p>Mercado Pago</p>
+                                            </div>
+                                            {formData.paymentMethod === "transferencia" && <IoIosCheckmarkCircle className="text-xl" />}
+                                        </div>
                                     </Button>
                                 </div>
-                            </section>
+                                {errors.stepFour && <p className="text-md text-red-600 py-2">{errors.stepFour}</p>}
+                            </div>
+                        </section>
+                    )}
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
+                        <Button onClick={back} disabled={loading} variant="outline">
+                            Volver
+                        </Button>
+                        { step < STEPS.length - 1 ? (
+
+                            <Button
+                                onClick={next}
+                            >
+                                Siguiente
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={handleSubmit}
+                                disabled={loading}
+                            >
+                                {loading ? "Procesando..." : "Solicitar turno"}
+                            </Button>
                         )}
-                    </form>
-                )}
+                    </div>
+                </div>
             </div>
         </div>
     </main>
