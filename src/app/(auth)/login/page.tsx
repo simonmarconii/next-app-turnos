@@ -29,6 +29,7 @@ export default function LoginPage() {
         setError(null);
 
         if (!formData.email || !formData.password) {
+            setError("Por favor, complete todos los campos");
             return;
         }
 
@@ -75,7 +76,7 @@ export default function LoginPage() {
                                     type="email"
                                     value={formData.email}
                                     onChange={(event) => updateField("email", event.target.value)}
-                                    className={`rounded-2xl ${error ? "border-2 border-red-600" : "border border-[#d8cabd]"} bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
+                                    className={`rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
                                 />
                             </div>
                             <div className="flex flex-col gap-2">
@@ -88,7 +89,7 @@ export default function LoginPage() {
                                     type="password"
                                     value={formData.password}
                                     onChange={(event) => updateField("password", event.target.value)}
-                                    className={`rounded-2xl border ${error ? "border-2 border-red-600" : "border border-[#d8cabd]"} bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
+                                    className={`rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
                                 />
                             </div>
                         </div>
@@ -97,12 +98,12 @@ export default function LoginPage() {
                                 Iniciar sesión
                             </Button>
                         </div>
+                        {error && (
+                            <div className="text-lg text-red-600">
+                                {error}
+                            </div>
+                        )}
                     </section>
-                    {error && (
-                        <div className="px-6 pb-4 text-lg text-red-600 sm:px-8">
-                            {error}
-                        </div>
-                    )}
                 </form>
             </div>
         </main>
