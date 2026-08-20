@@ -16,6 +16,7 @@ model schedule {
   user_id    String         @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   status     ScheduleStatus @default(pendiente_pago)
   updated_at DateTime       @default(now()) @db.Timestamptz(6)
+  expires_in DateTime?      @db.Timestamptz(6)
   payment    payment[]
   service    service        @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   user       user           @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -44,15 +45,15 @@ model user {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model payment {
-  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  created_at          DateTime        @default(now()) @db.Timestamptz(6)
-  updated_at          DateTime        @default(now()) @db.Timestamptz(6)
-  schedule_id         String          @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  external_payment_id String?         @db.Uuid
-  amount              Float           @db.Real
-  status              PaymentStatus   @default(pendiente)
-  payment_method      PaymentMethods?
-  schedule            schedule        @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  created_at          DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime      @default(now()) @db.Timestamptz(6)
+  schedule_id         String        @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  amount              Float         @db.Real
+  status              PaymentStatus @default(pendiente)
+  payment_method      String?       @db.VarChar
+  external_payment_id BigInt?
+  schedule            schedule      @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 enum PaymentMethods {
