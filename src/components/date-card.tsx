@@ -181,7 +181,7 @@ function DateCard({ date, dates }: Props) {
                     }}>
                         Editar
                     </Button>
-                    <Button size="small" variant="secondary" onClick={() => setDeletingDate(date)}>
+                    <Button size="small" variant="secondary" disabled={editForm.status === "pendiente_pago"} onClick={() => setDeletingDate(date)}>
                         <FaCheck className="text-xl" />
                     </Button>
                 </div>

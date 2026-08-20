@@ -185,7 +185,7 @@ function DatesForm({ services, dates }: Props) {
                 const checkoutData = await checkoutResponse.json();
                 router.push(checkoutData.data.init_point);
             } else {
-                router.push(`/turnos/confirmacion?serviceName=${selectedService?.name}&date=${formData.date}&name=${formData.name}&email=${formData.email}`);
+                router.push(`/turnos/confirmacion?serviceName=${selectedService?.name}&date=${formData.date}&time=${formData.time}&name=${formData.name}&email=${formData.email}`);
             }
 
         } catch (error) {
