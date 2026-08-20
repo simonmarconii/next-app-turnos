@@ -15,6 +15,9 @@ export async function PUT( request: Request, context: RouteParams ) {
     try {
         const existingDate = await prisma.schedule.findFirst({
             where: { id },
+            include: {
+                service: true,
+            }
         })
 
         if (!existingDate) {
@@ -22,6 +25,23 @@ export async function PUT( request: Request, context: RouteParams ) {
                 status: 404,
                 headers: { 'Content-Type': 'application/json' }
             })
+        }
+
+        if (status === "confirmado") {
+            const existingPayment = await prisma.payment.findFirst({
+                where: { schedule_id: existingDate.id },
+            });
+
+            if (!existingPayment) {
+                await prisma.payment.create({
+                    data: {
+                        schedule_id: existingDate.id,
+                        amount: existingDate.service.price,
+                        status: "aprobado",
+                        payment_method: "in_person",
+                    }
+                })
+            }
         }
 
         const updatedDate = await prisma.schedule.update({
