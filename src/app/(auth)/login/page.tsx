@@ -17,6 +17,7 @@ const initialFormData: FormData = {
 export default function LoginPage() {
     const [formData, setFormData] = useState(initialFormData);
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     const router = useRouter();
 
@@ -26,12 +27,14 @@ export default function LoginPage() {
 
     async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        setError(null);
 
         if (!formData.email || !formData.password) {
             setError("Por favor, complete todos los campos");
             return;
         }
+
+        setError(null);
+        setLoading(true);
 
         try {
             const response = await fetch("/api/auth/login", {
@@ -52,6 +55,8 @@ export default function LoginPage() {
         } catch (error) {
             console.error("Error submitting form:", error);
             setError("Error al enviar el formulario");
+        } finally {
+            setLoading(false);
         }
     }
 
@@ -59,6 +64,9 @@ export default function LoginPage() {
         <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
             <div className={`overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
                 <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
+                    <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">
+                        Iniciar sesión
+                    </p>
                     <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#1f1a16] sm:text-4xl">
                         Mis turnos
                     </h1>
@@ -94,7 +102,7 @@ export default function LoginPage() {
                             </div>
                         </div>
                         <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
-                            <Button type="submit" size="medium">
+                            <Button disabled={loading} type="submit" size="medium">
                                 Iniciar sesión
                             </Button>
                         </div>

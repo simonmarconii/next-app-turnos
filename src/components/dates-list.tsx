@@ -7,7 +7,7 @@ type Props = {
 };
 
 export default async function DatesList({ datesQuery }: Props) {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule?search_dates=${datesQuery}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/schedules?search_dates=${datesQuery}`, {
         cache: "no-store",
         method: "GET",
         headers: {
@@ -22,11 +22,11 @@ export default async function DatesList({ datesQuery }: Props) {
             <div className="flex justify-end border-b border-[#d8cabd] pb-2">
                 <FilterBar />
             </div>
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+            <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
                 <>
                     {dates.data && (
                         dates.data.map((date: DateType) => (
-                            <DateCard key={date.id} date={date} />
+                            <DateCard key={date.id} date={date} dates={dates.data} />
                         ))
                     )}
                 </>
