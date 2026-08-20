@@ -41,6 +41,10 @@ export async function POST(request: Request, context: RouteParams) {
             })
         }
 
+        const realDate = new Date(turno.date);
+        const date = realDate.toLocaleDateString("es-AR", { year: "numeric", month: "numeric", day: "numeric" });
+        const time = realDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+
         const preference = await preferenceClient.create({
             body: {
                 items: [
@@ -55,7 +59,7 @@ export async function POST(request: Request, context: RouteParams) {
                 external_reference: turno.id,
                 auto_return: "approved",
                 back_urls: {
-                    success: `https://10ngs3l8-3000.brs.devtunnels.ms/`,
+                    success: `https://10ngs3l8-3000.brs.devtunnels.ms/turnos/confirmacion?serviceName=${turno.service.name}&date=${date}&time=${time}&name=${turno.user.name}&email=${turno.user.email}`,
                     failure: `https://10ngs3l8-3000.brs.devtunnels.ms/`,
                     pending: `https://10ngs3l8-3000.brs.devtunnels.ms/`
                 },
