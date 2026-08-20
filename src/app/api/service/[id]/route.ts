@@ -8,6 +8,17 @@ export async function DELETE(request: Request, context: RouteParams) {
     const { id } = await context.params;
 
     try {
+        const existingService = await prisma.service.findFirst({
+            where: { id },
+        })
+
+        if (!existingService) {
+            return new Response(JSON.stringify({ error: "Service not found" }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
         await prisma.service.delete({
             where: {
                 id
