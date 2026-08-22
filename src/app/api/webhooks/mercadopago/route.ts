@@ -1,44 +1,88 @@
 import { prisma } from "@/lib/prisma";
 import mercadoPagoClient from "@/lib/mercadopago";
-import { Payment } from "mercadopago";
+import { Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } from "mercadopago";
 import { NextRequest } from "next/server";
 
 const paymentClient = new Payment(mercadoPagoClient);
 
 export async function POST(request: NextRequest) {
-    const body: {data: {id: string}} = await request.json();
+    const xSignature = request.headers.get('x-signature');
+    const xRequestId = request.headers.get('x-request-id');
+    const dataId = request.headers.get('data.id');
 
-    const payment = await paymentClient.get({ id: body.data.id });
-
-    if (payment.status === 'approved') {
-        const updatedSchedule = await prisma.schedule.update({
-            where: { id: payment.external_reference },
-            data: {
-                status: "confirmado",
-                updated_at: new Date(),
-            }
-        });
-
-        await prisma.payment.update({
-            where: { id: payment.metadata?.payment_id, schedule_id: updatedSchedule.id },
-            data: {
-                status: "aprobado",
-                updated_at: new Date(),
-                payment_method: payment.payment_method?.type,
-            }
+    try {
+        WebhookSignatureValidator.validate({
+            xSignature,
+            xRequestId,
+            dataId,
+            secret: `${process.env.MERCADO_PAGO_SECRET_KEY}`
         })
-
-    } else if (payment.status === 'rejected') {
-        const updatedSchedule = await prisma.schedule.delete({
-            where: { id: payment.external_reference }
-        });
-
-        await prisma.payment.delete({
-            where: { id: payment.metadata?.payment_id, schedule_id: updatedSchedule.id }
-        });
+    } catch (error) {
+        if (error instanceof InvalidWebhookSignatureError) {
+            return new Response("Invalid signature", {
+                status: 401,
+            })
+        }
     }
 
-    return new Response(null, {
-        status: 200,
-    })
+    const body: {data: {id: string}, action?: string} = await request.json();
+
+    if (body.action && body.action !== "payment.created" && body.action !== "payment.updated") {
+        return new Response("Action ignored", { status: 200 });
+    }
+
+    try {
+        const payment = await paymentClient.get({ id: body.data.id });
+
+        const scheduleId = payment.external_reference;
+
+        if (!scheduleId) {
+            return new Response("Missing references", { status: 400 });
+        }
+
+        await prisma.$transaction(async (tx) => {
+            const currentSchedule = await tx.schedule.findUnique({
+                where: { id: scheduleId }
+            });
+
+            if (!currentSchedule) return;
+
+            if (currentSchedule.status === "confirmado") return;
+
+            if (payment.status === 'approved') {
+                await tx.schedule.update({
+                    where: { id: scheduleId },
+                    data: {
+                        status: "confirmado",
+                        updated_at: new Date(),
+                    }
+                });
+        
+                await tx.payment.update({
+                    where: { schedule_id: scheduleId },
+                    data: {
+                        status: "aprobado",
+                        updated_at: new Date(),
+                        payment_method: payment.payment_method?.type,
+                    }
+                });
+            } else if (payment.status === 'rejected') {
+                await tx.payment.deleteMany({
+                    where: { schedule_id: scheduleId }
+                });
+
+                await tx.schedule.delete({
+                    where: { id: scheduleId }
+                });
+            }
+        });
+
+        return new Response(null, { status: 200 });
+    } catch (error) {
+        console.error("Error processing webhook:", error);
+        return new Response(JSON.stringify({error: "Error interno del servidor"}), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
 }
