@@ -9,6 +9,9 @@ import { IoIosCheckmarkCircle } from "react-icons/io";
 import { MdStorefront } from "react-icons/md";
 import Select from './select';
 import { useRouter } from "next/navigation";
+import { z } from "zod";
+import { dateSchema } from '@/schemas/schedule';
+import { userScheduleSchema } from '@/schemas/user';
 
 type FormData = {
     paymentMethod: string;
@@ -33,11 +36,11 @@ const initialFormData: FormData = {
 };
 
 const timeSlots = [
-    "09:00",
-    "11:00",
-    "13:00",
-    "15:00",
-    "17:00",
+    "12:00",
+    "14:00",
+    "16:00",
+    "18:00",
+    "20:00",
 ];
 
 const STEPS = ["Elegir servicio", "Elegir turno", "Tus datos", "Resumen"];
@@ -73,6 +76,18 @@ function DatesForm({ services, dates }: Props) {
         return services.find((service) => service.id === formData.serviceId);
     }, [formData.serviceId, services]);
 
+    function formatUTCTimeToArgentina(utcTime: string) {
+        const [hour, minute] = utcTime.split(":").map(Number);
+        // La fecha es irrelevante, solo uso la hora y el minuto
+        const anchorDate = new Date(Date.UTC(2000, 0, 1, hour, minute));
+        return anchorDate.toLocaleTimeString("es-AR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "America/Argentina/Buenos_Aires",
+        });
+    }
+
     const bookedTimesForSelectedDate = useMemo(() => {
         if (!formData.date) return [];
         return dates
@@ -80,12 +95,6 @@ function DatesForm({ services, dates }: Props) {
             .filter((d) => d.datePart === formData.date)
             .map((d) => d.time);
     }, [dates, formData.date]);
-
-    const availableTimeSlots = useMemo(() => {
-        return timeSlots.filter((slot) => !bookedTimesForSelectedDate.includes(slot));
-    }, [bookedTimesForSelectedDate]);
-
-    const isDayFull = formData.date !== "" && availableTimeSlots.length === 0;
 
     function updateField(field: keyof FormData, value: string) {
         setFormData((current) => ({ ...current, [field]: value }));
@@ -101,18 +110,6 @@ function DatesForm({ services, dates }: Props) {
     }
 
     function handleDateChange(value: string) {
-        const bookedForThatDay = dates
-            .map((d) => splitDateTime(d.date))
-            .filter((d) => d.datePart === value)
-            .map((d) => d.time);
-        const stillAvailable = timeSlots.filter((slot) => !bookedForThatDay.includes(slot));
-
-        if (value && stillAvailable.length === 0) {
-            setErrors((current) => ({ ...current, stepTwo: "No hay horarios disponibles para la fecha seleccionada." }));
-            setFormData((current) => ({ ...current, date: value, time: "" }));
-            return;
-        }
-
         setFormData((current) => ({ ...current, date: value, time: "" }));
     }
 
@@ -120,19 +117,31 @@ function DatesForm({ services, dates }: Props) {
         const newErrors: ErrorsType = {};
 
         if (step === 0) {
-            if (!formData.serviceId) newErrors.stepOne = "Por favor, seleccioná un servicio.";
+            const result = z.uuid().safeParse(formData.serviceId);
+            if (!result.success) {
+                newErrors.stepOne = "Por favor, seleccioná un servicio.";
+            }
         }
 
         if (step === 1) {
-            if (!formData.date || !formData.time) newErrors.stepTwo = "Por favor, seleccioná una fecha y un horario.";
+            const result = dateSchema.safeParse({ date: formData.date, time: formData.time });
+            if (!result.success) {
+                newErrors.stepTwo = "Por favor, completá todos los campos de fecha y hora.";
+            }
         }
 
         if (step === 2) {
-            if (!formData.name || !formData.lastname || !formData.email || !formData.phone) newErrors.stepThree = "Por favor, completá todos los campos.";
+            const result = userScheduleSchema.safeParse({name: formData.name, lastname: formData.lastname, email: formData.email, phone: formData.phone});
+            if (!result.success) {
+                newErrors.stepThree = "Por favor, completá todos los campos.";
+            }
         }
 
         if (step === 3) {
-            if (!formData.paymentMethod) newErrors.stepFour = "Por favor, seleccioná un método de pago.";
+            const result = z.enum(["efectivo", "transferencia"]).safeParse(formData.paymentMethod);
+            if (!result.success) {
+                newErrors.stepFour = "Por favor, seleccioná un método de pago.";
+            }
         }
 
         setErrors(newErrors);
@@ -149,7 +158,6 @@ function DatesForm({ services, dates }: Props) {
 
     async function handleSubmit() {
         if (!validateStep()) {
-            console.log("Errores de validación");
             return;
         }
         setLoading(true);
@@ -165,28 +173,43 @@ function DatesForm({ services, dates }: Props) {
 
             if (!scheduleResponse.ok) {
                 const data = await scheduleResponse.json();
-                throw new Error(data.message || "Error al solicitar el turno");
-            }
-
-            if (formData.paymentMethod === "transferencia") {
+                console.error("Error al solicitar el turno:", data);
+            } else {
                 const scheduleData = await scheduleResponse.json();
-                const checkoutResponse = await fetch(`/api/schedule/${scheduleData.data.id}/checkout`, {
+
+                if (formData.paymentMethod === "transferencia") {
+                    const checkoutResponse = await fetch(`/api/schedule/${scheduleData.data.id}/checkout`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                    });
+        
+                    if (!checkoutResponse.ok) {
+                        const data = await scheduleResponse.json();
+                        throw new Error(data.message || "Error al solicitar el turno");
+                    }
+        
+                    const checkoutData = await checkoutResponse.json();
+                    router.push(checkoutData.data.init_point);
+                } else {
+                    router.push(`/turnos/resumen?id=${scheduleData.data.id}`);
+                }
+
+                const sendResponse = await fetch("/api/send", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
                     },
-                });
-    
-                if (!checkoutResponse.ok) {
-                    const data = await scheduleResponse.json();
-                    throw new Error(data.message || "Error al solicitar el turno");
+                    body: JSON.stringify({ scheduleId: scheduleData.data.id }),
+                })
+
+                if (!sendResponse.ok) {
+                    const data = await sendResponse.json();
+                    console.error("Error al solicitar el turno:", data);
                 }
-    
-                const checkoutData = await checkoutResponse.json();
-                router.push(checkoutData.data.init_point);
-            } else {
-                router.push(`/turnos/confirmacion?serviceName=${selectedService?.name}&date=${formData.date}&time=${formData.time}&name=${formData.name}&email=${formData.email}`);
             }
+
 
         } catch (error) {
             throw new Error("Error al solicitar el turno: " + error);
@@ -273,19 +296,20 @@ function DatesForm({ services, dates }: Props) {
                                             name="time"
                                             value={formData.time}
                                             onChange={(event) => updateField("time", event.target.value)}
-                                            disabled={!formData.date || isDayFull}
+                                            disabled={!formData.date}
                                             className="block w-full appearance-none bg-transparent pr-8 outline-none"
                                         >
                                             <option value="">Elegí un horario</option>
                                             {timeSlots.map((timeSlot) => {
                                                 const isBooked = bookedTimesForSelectedDate.includes(timeSlot);
+                                                const displayTime = formatUTCTimeToArgentina(timeSlot);
                                                 return (
                                                     <option
                                                         key={timeSlot}
                                                         value={timeSlot}
                                                         disabled={isBooked}
                                                     >
-                                                        {timeSlot} {isBooked ? "(no disponible)" : ""}
+                                                        {displayTime} {isBooked ? "(no disponible)" : ""}
                                                     </option>
                                                 );
                                             })}
@@ -383,7 +407,7 @@ function DatesForm({ services, dates }: Props) {
                                                 Fecha y hora
                                             </p>
                                             <p className="font-medium">
-                                                {formData.date}, {formData.time}
+                                                {formData.date}, {formatUTCTimeToArgentina(formData.time)}
                                             </p>
                                         </div>
                                         <div>
