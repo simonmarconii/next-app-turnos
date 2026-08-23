@@ -2,17 +2,35 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
-    /*const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get("search_dates") || "upcoming";*/
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get("search_dates") || "confirmed";
+
+    let clause = {
+        status: {}
+    };
+
+    if (query === "completed") {
+        clause = {
+            status: "completado"
+        }
+    } else if (query === "confirmed") {
+        clause = {
+            status: "confirmado"
+        }
+    } else if (query === "all") {
+        clause = {
+            status: {
+                in: ["completado", "confirmado"]
+            }
+        }
+    }
+
     try {
         const schedules = await prisma.schedule.findMany({
             include: {user: true, service: true},
             orderBy: {date: "asc"},
             where: {
-                OR : [
-                    { status: "confirmado" },
-                    { expires_in: null }
-                ]
+                ...clause,       
             }
         });
 
@@ -28,8 +46,8 @@ export async function GET(request: NextRequest) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        console.error("Error fetching schedules:", error);
+        return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
