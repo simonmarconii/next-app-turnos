@@ -33,8 +33,8 @@ export default async function ResumePage({ searchParams }: Props) {
     }
 
     const realDate = new Date(data.data.date);
-    const date = realDate.toLocaleDateString("es-AR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" });
-    const time = realDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+    const date = realDate.toLocaleString("es-AR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
+    const time = realDate.toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" });
 
     return (
         <main className="mx-auto h-full flex items-center justify-center max-w-3xl px-4 sm:px-6 lg:px-8">
@@ -42,7 +42,7 @@ export default async function ResumePage({ searchParams }: Props) {
                 <div className="px-6 py-8 sm:px-8">
                     <div>
                         <p className="text-center text-xl font-medium text-[#1f1a16]">
-                            {`¡Gracias por confirmar tu turno ${data.data.user.name}! Hemos recibido tu solicitud para el servicio "${data.data.service.name}" el día ${date} a las ${time} .`}
+                            {`¡Gracias por confirmar tu turno ${data.data.user.name}! Hemos recibido tu solicitud para el servicio ${data.data.service.name} el día ${date} a las ${time} .`}
                         </p>
                         <p className="text-center text-sm text-[#4d4037]"> 
                             Te enviaremos más información a tu correo electrónico: {data.data.user.email}. Por favor, revisá en spam si no lo ves en tu bandeja de entrada.
