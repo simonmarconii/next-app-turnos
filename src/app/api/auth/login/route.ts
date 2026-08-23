@@ -1,8 +1,17 @@
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { userLoginSchema } from "@/schemas/user";
 
 export async function POST(request: Request) {
   const { email, password } = await request.json();
+
+  const result = userLoginSchema.safeParse({ email, password });
+
+  if (!result.success) {
+    return new Response(JSON.stringify({ error: result.error.flatten().fieldErrors }), {
+      status: 400,
+    });
+  }
 
   const cookieStore = await cookies()
   const supabase = await createClient(cookieStore);
@@ -36,8 +45,8 @@ export async function POST(request: Request) {
       { status: 200 },
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error("Error al loguear usuario:", error);
+    return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
       status: 500,
     });
   }
