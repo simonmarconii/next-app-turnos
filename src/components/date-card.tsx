@@ -21,11 +21,11 @@ type FormData = {
 };
 
 const timeSlots = [
-    "09:00",
-    "11:00",
-    "13:00",
-    "15:00",
-    "17:00",
+    "12:00",
+    "14:00",
+    "16:00",
+    "18:00",
+    "20:00",
 ];
 
 type Props = {
@@ -35,71 +35,99 @@ type Props = {
 
 function DateCard({ date, dates }: Props) {
     const [editingDate, setEditingDate] = useState<DateType | null>(null);
-    const [deletingDate, setDeletingDate] = useState<DateType | null>( null);
+    const [completeDate, setCompleteDate] = useState<DateType | null>( null);
     const [editForm, setEditForm] = useState({ date: new Date(date.date).toISOString(), time: "", status: date.status });
 
     const router = useRouter();
+
+    function formatUTCTimeToArgentina(utcTime: string) {
+        const [hour, minute] = utcTime.split(":").map(Number);
+        // The date is irrelevant, i only use the hour and minute
+        const anchorDate = new Date(Date.UTC(2000, 0, 1, hour, minute));
+        return anchorDate.toLocaleTimeString("es-AR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+            timeZone: "America/Argentina/Buenos_Aires",
+        });
+    }
     
     const bookedTimesForSelectedDate = useMemo(() => {
         if (!editForm.date) return [];
+        /*
+        In this function i take all the dates in the db and first cut them in date (i.e. 2026/07/15) and time (i.e. 12:00)
+        and then filter them by the date that are equal to the date that the user selected in the form
+        and finally return an array of the times that are already booked
+         */
         return dates
             .map((d) => splitDateTime(d.date))
             .filter((d) => d.datePart === editForm.date)
             .map((d) => d.time);
     }, [dates, editForm.date]);
 
-    const availableTimeSlots = useMemo(() => {
-        return timeSlots.filter((slot) => !bookedTimesForSelectedDate.includes(slot));
-    }, [bookedTimesForSelectedDate]);
-
     function handleDateChange(value: string) {
-        const bookedForThatDay = dates
-            .map((d) => splitDateTime(d.date))
-            .filter((d) => d.datePart === value)
-            .map((d) => d.time);
-        const stillAvailable = timeSlots.filter((slot) => !bookedForThatDay.includes(slot));
-
-        if (value && stillAvailable.length === 0) {
-            setEditForm((current) => ({ ...current, date: value, time: "" }));
-            return;
-        }
-
         setEditForm((current) => ({ ...current, date: value, time: "" }));
     }
-
-    async function handleDeleteDate(dateId: string) {
-        try {
-            const response = await fetch(`/api/schedule/${dateId}`, {
-                method: "DELETE",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to delete date");
-            }
-
-            setDeletingDate(null);
-            router.refresh();
-        } catch (error) {
-            throw new Error("Failed to delete date: " + error);
-        }
-    }
-
-    const isDayFull = editForm.date !== "" && availableTimeSlots.length === 0;
 
     function updateField(field: keyof FormData, value: string) {
         setEditForm((current) => ({ ...current, [field]: value }));
     }
 
+    async function handleCompleteDateStatus(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if (!completeDate ) return;
+
+        try {
+            const response = await fetch(`/api/schedule/${completeDate.id}/status`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ status: "completado" }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update date status");
+            } else {
+                setCompleteDate(null);
+                router.refresh();
+            }
+        } catch (error) {
+            throw new Error("Failed to update date status: " + error);
+        }
+    }
+
+    /*async function handlePayDateStatus(event: FormEvent<HTMLFormElement>) {
+        event.preventDefault();
+        if ( !editingDate ) return;
+
+        try {
+            const response = await fetch(`/api/schedule/${editingDate.id}/status`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ status: "confirmado" }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to update date status");
+            } else {
+                setEditingDate(null);
+                router.refresh();
+            }
+        } catch (error) {
+            throw new Error("Failed to update date status: " + error);
+        }
+    }*/
+
     async function handleUpdateDate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!editingDate) return;
-        if (!editForm.date || !editForm.status) return;
+        if (!editForm.date && !editForm.time) return;
 
         try {
-            const response = await fetch(`/api/schedule/${editingDate.id}`, {
+            const response = await fetch(`/api/schedule/${editingDate.id}/date`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -107,16 +135,15 @@ function DateCard({ date, dates }: Props) {
                 body: JSON.stringify({
                     date: editForm.date,
                     time: editForm.time,
-                    status: editForm.status,
                 }),
             });
 
             if (!response.ok) {
-                throw new Error("Failed to update date");
+                console.error("Failed to update date:", response.statusText);
+            } else {
+                setEditingDate(null);
+                router.refresh();
             }
-
-            setEditingDate(null);
-            router.refresh();
         } catch (error) {
             throw new Error("Failed to update date: " + error);
         }
@@ -126,7 +153,7 @@ function DateCard({ date, dates }: Props) {
   return (
     <>
         <div
-            className="flex justify-between rounded-2xl border border-[#e4d6c8] bg-white px-4 py-3 shadow-sm"
+            className="flex gap-2 sm:justify-between rounded-2xl border border-[#e4d6c8] bg-white px-4 py-3 shadow-sm"
         >
             <div>
                 <div className="flex items-center gap-2">
@@ -134,7 +161,7 @@ function DateCard({ date, dates }: Props) {
                         Dia:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {new Date(date.date).toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" })}
+                        {new Date(date.date).toLocaleString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" })}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -142,7 +169,7 @@ function DateCard({ date, dates }: Props) {
                         Hora:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {new Date(date.date).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })}
+                        {new Date(date.date).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" })}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -166,22 +193,22 @@ function DateCard({ date, dates }: Props) {
                         Estado:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {date.status === "pendiente_pago" && "Pendiente de pago"}
-                        {date.status === "confirmado" && "Turno pago"}
+                        {date.status === "pendiente" && "Turno pendiente"}
+                        {date.status === "confirmado" && "Turno confirmado"}
                         {date.status === "cancelado" && "Turno cancelado"}
                         {date.status === "completado" && "Turno completado"}
                     </p>
                 </div>
             </div>
             <div className="">
-                <div className="flex items-center gap-4">
-                    <Button size="small" onClick={() => {
+                <div className="flex items-center flex-col sm:flex-row gap-4">
+                    <Button size="small" disabled={date.status === "completado"} onClick={() => {
                         setEditingDate(date);
                         setEditForm({ date: date.date, time: "", status: date.status });
                     }}>
                         Editar
                     </Button>
-                    <Button size="small" variant="secondary" disabled={editForm.status === "pendiente_pago"} onClick={() => setDeletingDate(date)}>
+                    <Button size="small" variant="secondary" disabled={date.status === "completado"} onClick={() => setCompleteDate(date)}>
                         <FaCheck className="text-xl" />
                     </Button>
                 </div>
@@ -197,8 +224,8 @@ function DateCard({ date, dates }: Props) {
                                 Editar turno
                             </p>
                             <h2 className="mt-2 text-lg font-semibold text-[#1f1a16]">
-                                Turno del {new Date(editingDate.date).toLocaleTimeString("es-AR", { 
-                                    year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" 
+                                Turno del {new Date(editingDate.date).toLocaleString("es-AR", { 
+                                    year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" 
                                 })}
                             </h2>
                         </div>
@@ -226,46 +253,27 @@ function DateCard({ date, dates }: Props) {
                                     name="time"
                                     value={editForm.time}
                                     onChange={(event) => updateField("time", event.target.value)}
-                                    disabled={!editForm.date || isDayFull}
+                                    disabled={!editForm.date}
                                     className="block w-full appearance-none bg-transparent pr-8 outline-none"
                                 >
                                     <option value="">Elegí un horario</option>
                                     {timeSlots.map((timeSlot) => {
                                         const isBooked = bookedTimesForSelectedDate.includes(timeSlot);
+                                        const displayTime = formatUTCTimeToArgentina(timeSlot);
                                         return (
                                             <option
                                                 key={timeSlot}
                                                 value={timeSlot}
                                                 disabled={isBooked}
                                             >
-                                                {timeSlot} {isBooked ? "(no disponible)" : ""}
+                                                {displayTime} {isBooked ? "(no disponible)" : ""}
                                             </option>
                                         );
                                     })}
                                 </select>
                             </Select>
                         </div>
-                        <div className="flex flex-col gap-2">
-                            <label className="text-sm font-semibold text-[#4d4037]">
-                                Estado
-                            </label>
-                            <Select>
-                                <select
-                                    id="status"
-                                    name="status"
-                                    value={editForm.status}
-                                    onChange={(e) => setEditForm({...editForm, 
-                                        status: e.target.value as "pendiente_pago" | "confirmado" | "cancelado" | "completado"}
-                                    )}
-                                    className="block w-full appearance-none bg-transparent pr-8 outline-none"
-                                >
-                                    <option value="">Elegí un estado</option>
-                                    <option value="pendiente_pago">Pendiente de pago</option>
-                                    <option value="confirmado">Turno pago</option>
-                                </select>
-                            </Select>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-2">
+                        <div className="flex justify-between gap-3 pt-2">
                             <Button
                                 onClick={() => setEditingDate(null)}
                                 variant="outline"
@@ -273,7 +281,7 @@ function DateCard({ date, dates }: Props) {
                             >
                                 Cancelar
                             </Button>
-                            <Button type="submit" size="medium">
+                            <Button type="submit">
                                 Guardar cambios
                             </Button>
                         </div>
@@ -282,7 +290,7 @@ function DateCard({ date, dates }: Props) {
             </div>
         )}
 
-        {deletingDate && (
+        {completeDate && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
                 <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
                 <div className="flex flex-col gap-5">
@@ -292,28 +300,28 @@ function DateCard({ date, dates }: Props) {
                                 Completar turno
                             </p>
                             <h2 className="mt-2 text-lg font-semibold text-[#1f1a16]">
-                                ¿Desea completar el turno del {new Date(deletingDate.date).toLocaleTimeString("es-AR", { 
-                                weekday: "long", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC" 
+                                ¿Desea completar el turno del {new Date(completeDate.date).toLocaleString("es-AR", { 
+                                weekday: "long", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" 
                                 })}?
                             </h2>
                         </div>
                     </div>
-                    <div className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center">
-                    <Button
-                        onClick={() => setDeletingDate(null)}
-                        variant="outline"
-                        size="medium"
-                    >
-                        Cancelar
-                    </Button>
-                    <Button
-                        onClick={() => handleDeleteDate(deletingDate.id)}
-                        variant="secondary"
-                        size="medium"
-                    >
-                        Completar
-                    </Button>
-                    </div>
+                    <form className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center" onSubmit={handleCompleteDateStatus}>
+                        <Button
+                            onClick={() => setCompleteDate(null)}
+                            variant="outline"
+                            size="medium"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            type="submit"
+                            variant="secondary"
+                            size="medium"
+                        >
+                            Completar
+                        </Button>
+                    </form>
                 </div>
                 </div>
             </div>

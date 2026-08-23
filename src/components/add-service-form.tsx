@@ -6,12 +6,22 @@ import { useRouter } from "next/navigation";
 
 export default function AddServiceForm() {
     const [newService, setNewService] = useState({ name: "", price: 0 });
+    const [error, setError] = useState<{
+        name?: string[] | null;
+        price?: string[] | null;
+    }>({
+        name: null,
+        price: null
+    });
 
     const router = useRouter();
 
     async function handleAddService(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
-        if (!newService) return;
+        setError({
+            name: null,
+            price: null
+        });
 
         try {
             const response = await fetch("/api/service", {
@@ -23,12 +33,26 @@ export default function AddServiceForm() {
             });
 
             if (!response.ok) {
-                throw new Error("Error al agregar el servicio");
+                const data = await response.json();
+                if (data.error.name) {
+                    setError((prevError) => ({
+                        ...prevError,
+                        name: data.error.name,
+                    }));
+                }
+                if (data.error.price) {
+                    setError((prevError) => ({
+                        ...prevError,
+                        price: data.error.price,
+                    }));
+                }
+            } else {
+                router.refresh();
             }
-
-            router.refresh();
         } catch (error) {
-            throw new Error("Error al agregar el servicio" + error);
+            console.error("Error al agregar el servicio:", error);
+        } finally {
+            setNewService({ name: "", price: 0 });
         }
     }
 
@@ -47,6 +71,11 @@ export default function AddServiceForm() {
                         onChange={(e) => setNewService({ ...newService!, name: e.target.value })}
                         className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15" 
                     />
+                    {error.name && (
+                        <div className="text-lg text-red-600">
+                            {error.name}
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-col gap-2">
                     <label className="text-sm font-semibold text-[#4d4037]">Precio</label>
@@ -59,6 +88,11 @@ export default function AddServiceForm() {
                         }
                         className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                     />
+                    {error.price && (
+                        <div className="text-lg text-red-600">
+                            {error.price}
+                        </div>
+                    )}
                 </div>
                 <div className="pt-2">
                     <Button type="submit" size="medium">

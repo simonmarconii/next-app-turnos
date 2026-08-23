@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { z } from "zod";
+import { priceSchema } from "@/schemas/service";
 
 type RouteParams = {
     params: Promise<{ id: string }>;
@@ -7,13 +9,22 @@ type RouteParams = {
 export async function DELETE(request: Request, context: RouteParams) {
     const { id } = await context.params;
 
+    const result = z.uuid().safeParse(id);
+
+    if (!result.success) {
+        return new Response(JSON.stringify({ error: "Servicio no encontrado" }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
+
     try {
         const existingService = await prisma.service.findFirst({
             where: { id },
         })
 
         if (!existingService) {
-            return new Response(JSON.stringify({ error: "Service not found" }), {
+            return new Response(JSON.stringify({ error: "Servicio no encontrado" }), {
                 status: 404,
                 headers: { 'Content-Type': 'application/json' }
             })
@@ -25,13 +36,13 @@ export async function DELETE(request: Request, context: RouteParams) {
             }
         })
         
-        return new Response(JSON.stringify({message: "Service deleted successfully"}), {
+        return new Response(JSON.stringify({message: "Servicio eliminado correctamente"}), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        console.error("Error deleting service:", error);
+        return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
@@ -44,6 +55,15 @@ export async function PUT(request: Request, context: RouteParams) {
 
     const { price } = body;
 
+    const result = priceSchema.safeParse(price);
+
+    if (!result.success) {
+        return new Response(JSON.stringify({ error: "Precio debe ser mayor a 0" }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
+
     try {
         const updatedService = await prisma.service.update({
             where: {
@@ -54,13 +74,13 @@ export async function PUT(request: Request, context: RouteParams) {
             }
         })
         
-        return new Response(JSON.stringify({message: "Service updated successfully", data: updatedService}), {
+        return new Response(JSON.stringify({message: "Servicio actualizado correctamente", data: updatedService}), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        console.error("Error updating service:", error);
+        return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })

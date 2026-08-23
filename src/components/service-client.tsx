@@ -15,6 +15,7 @@ export default function ServicesClient({
   const [editingService, setEditingService] = useState<ServiceType | null>(null);
   const [deletingService, setDeletingService] = useState<ServiceType | null>( null);
   const [editForm, setEditForm] = useState({ price: 0 });
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
 
@@ -41,6 +42,8 @@ export default function ServicesClient({
   async function handleUpdateService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingService) return;
+    setError(null);
+
     try {
       const response = await fetch(`/api/service/${editingService.id}`, {
         method: "PUT",
@@ -53,13 +56,14 @@ export default function ServicesClient({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update service");
+        const data = await response.json();
+        setError(data.error);
+      } else {
+        setEditingService(null);
+        router.refresh();
       }
-
-      setEditingService(null);
-      router.refresh();
     } catch (error) {
-      throw new Error("Failed to update service: " + error);
+      console.error("Failed to update service: " + error);
     }
   }
 
@@ -130,6 +134,11 @@ export default function ServicesClient({
                   }
                   className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                 />
+                {error && (
+                  <div className="text-lg text-red-600">
+                      {error}
+                  </div>
+                )}
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <Button

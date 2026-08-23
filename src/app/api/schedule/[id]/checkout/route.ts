@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import mercadoPagoClient from "@/lib/mercadopago";
 import { Preference } from "mercadopago";
+import { z } from "zod";
 
 const preferenceClient = new Preference(mercadoPagoClient);
 
@@ -10,6 +11,15 @@ type RouteParams = {
 
 export async function POST(request: Request, context: RouteParams) {
     const { id } = await context.params;
+
+    const result = z.string().uuid().safeParse(id);
+
+    if (!result.success) {
+        return new Response(JSON.stringify({ error: "Turno no encontrado" }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+        })
+    }
 
     try {
         const turno = await prisma.schedule.findUnique({
@@ -27,23 +37,19 @@ export async function POST(request: Request, context: RouteParams) {
             })
         }
 
-        const newPayment = await prisma.payment.create({
-            data: {
-                schedule_id: turno.id,
-                amount: turno.service.price,
-            }
-        });
+        const existingPayment = await prisma.payment.findFirst({
+            where: { schedule_id: turno.id },
+        })
 
-        if (!newPayment) {
-            return new Response(JSON.stringify({ error: "Error al crear el pago" }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            })
+        if (existingPayment?.external_payment_id) {
+            const existingPreference = await preferenceClient.get({ preferenceId: existingPayment.external_payment_id });
+            return new Response(JSON.stringify({
+                data: {
+                    init_point: existingPreference.init_point,
+                    sandbox_init_point: existingPreference.sandbox_init_point,
+                }
+            }));
         }
-
-        const realDate = new Date(turno.date);
-        const date = realDate.toLocaleDateString("es-AR", { year: "numeric", month: "numeric", day: "numeric" });
-        const time = realDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 
         const preference = await preferenceClient.create({
             body: {
@@ -59,34 +65,35 @@ export async function POST(request: Request, context: RouteParams) {
                 external_reference: turno.id,
                 auto_return: "approved",
                 back_urls: {
-                    success: `https://10ngs3l8-3000.brs.devtunnels.ms/turnos/confirmacion?serviceName=${turno.service.name}&date=${date}&time=${time}&name=${turno.user.name}&email=${turno.user.email}`,
-                    failure: `https://10ngs3l8-3000.brs.devtunnels.ms/`,
-                    pending: `https://10ngs3l8-3000.brs.devtunnels.ms/`
+                    success: `${process.env.NEXT_PUBLIC_API_URL}/turnos/resumen?id=${turno.id}`,
+                    failure: `${process.env.NEXT_PUBLIC_API_URL}/`,
+                    pending: `${process.env.NEXT_PUBLIC_API_URL}/`
                 },
-                notification_url: `https://10ngs3l8-3000.brs.devtunnels.ms/api/webhooks/mercadopago`,
-                metadata: {
-                    payment_id: newPayment.id,
-                }
+                notification_url: `${process.env.NEXT_PUBLIC_API_URL}/api/webhooks/mercadopago`,
             }
         });
 
-        if (!preference) {
-            return new Response(JSON.stringify({ error: "Error al crear la preferencia de pago" }), {
-                status: 500,
-                headers: { 'Content-Type': 'application/json' }
-            })
-        }
+        await prisma.payment.upsert({
+            where: { schedule_id: turno.id },
+            create: {
+                schedule_id: turno.id,
+                amount: turno.service.price,
+                external_payment_id: preference.id,
+            }, 
+            update: {
+                external_payment_id: preference.id,
+            }
+        });
 
         return new Response(JSON.stringify({
             data: {
                 init_point: preference.init_point,
                 sandbox_init_point: preference.sandbox_init_point, 
-                payment_id: newPayment.id,
             } 
         }));
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new Response(JSON.stringify({ error: errorMessage }), {
+       console.error("Error al crear la preferencia de pago:", error);
+        return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })

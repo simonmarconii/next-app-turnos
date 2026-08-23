@@ -1,8 +1,10 @@
 import DatesForm from "@/components/dates-form";
 
 export default async function SchedulesPage() {
+    let datesData = [];
+    let servicesData = [];
+
     const datesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule`, {
-        cache: "no-cache",
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -10,13 +12,13 @@ export default async function SchedulesPage() {
     });
 
     if (!datesResponse.ok) {
-        throw new Error("Failed to fetch dates");
+        console.error("Failed to fetch dates:", datesResponse.statusText);
+    } else {
+        datesData = await datesResponse.json();
     }
 
-    const datesData = await datesResponse.json();
 
     const servicesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/service`, {
-        cache: "no-cache",
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -24,10 +26,10 @@ export default async function SchedulesPage() {
     });
 
     if (!servicesResponse.ok) {
-        throw new Error("Failed to fetch services");
+        console.error("Failed to fetch services:", servicesResponse.statusText);
+    } else {
+        servicesData = await servicesResponse.json();
     }
-
-    const servicesData = await servicesResponse.json();
 
     return (
         <DatesForm services={servicesData.data} dates={datesData.data} />

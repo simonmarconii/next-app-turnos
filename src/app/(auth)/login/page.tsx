@@ -37,7 +37,7 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response = await fetch("/api/auth/login", {
+            const response = await fetch(`/api/auth/login`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -48,10 +48,10 @@ export default function LoginPage() {
             if (!response.ok) {
                 const data = await response.json();
                 setError(data.error);
+            } else {
+                router.push("/admin");
+                router.refresh();
             }
-
-            router.push("/admin");
-            router.refresh();
         } catch (error) {
             console.error("Error submitting form:", error);
             setError("Error al enviar el formulario");
