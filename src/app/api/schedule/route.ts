@@ -5,7 +5,7 @@ export async function POST(request: Request) {
 
     const { name, lastname, email, phone, date, time, serviceId, paymentMethod } = body;
 
-    const realDate = new Date(date + "T" + time + ":00.000Z");
+    const realDate = new Date(`${date}T${time}:00.000Z`);
 
     try {
         let user = await prisma.user.findFirst({
@@ -41,6 +41,24 @@ export async function POST(request: Request) {
                 service: true
             }
         })
+
+        if (paymentMethod !== "transferencia") {
+            await prisma.payment.create({
+                data: {
+                    schedule_id: newSchedule.id,
+                    amount: newSchedule.service.price,
+                    payment_method: "in_person",
+                }
+            })
+
+            await prisma.schedule.update({
+                where: { id: newSchedule.id },
+                data: {
+                    status: "confirmado",
+                    updated_at: new Date(),
+                }
+            })
+        }
     
         return new Response(JSON.stringify({data: newSchedule}), {
             status: 201,
@@ -58,16 +76,9 @@ export async function POST(request: Request) {
 export async function GET() {
     try {
         const schedules = await prisma.schedule.findMany({
-            include: {service: true},
-            orderBy: {date: "asc"},
-            where: {
-                OR : [
-                    { status: "confirmado" },
-                    { expires_in: {
-                            lt: new Date()
-                        } 
-                    }
-                ]
+            include: { service: true },
+            where: { 
+                status: "confirmado",
             }
         });
 
@@ -83,8 +94,8 @@ export async function GET() {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        console.error("Error fetching schedules:", error);
+        return new Response(JSON.stringify({ error: "Error interno del servidor" }), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
