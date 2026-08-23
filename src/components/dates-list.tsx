@@ -19,10 +19,10 @@ export default async function DatesList({ datesQuery }: Props) {
 
     return (
         <div className="space-y-3">
-            <div className="flex justify-end border-b border-[#d8cabd] pb-2">
+            <div className="flex justify-center sm:justify-start border-b border-[#d8cabd] pb-2">
                 <FilterBar />
             </div>
-            <div className="grid gap-3 grid-cols-1 md:grid-cols-2">
+            <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
                 <>
                     {dates.data && (
                         dates.data.map((date: DateType) => (
