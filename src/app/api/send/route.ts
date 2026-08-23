@@ -1,30 +1,52 @@
 import EmailTemplate from "@/components/email-template";
 import { resend } from "@/lib/resend";
-import "dotenv/config";
+import { prisma } from "@/lib/prisma";
+import { z } from "zod";
 
 export async function POST(request: Request) {
     const body = await request.json();
 
-    const { email, name, lastname, date, time, serviceName } = body;
+    const { scheduleId } = body;
 
-    if (!email || !name || !lastname || !date || !time) {
-        return Response.json(
-            { error: "Missing required fields" },
-            { status: 400 }
-        );
+    const result = z.uuid().safeParse(scheduleId);
+
+    if (!result.success) {
+        return new Response(JSON.stringify({ error: "Turno no encontrado" }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+        })
     }
 
     try {
+        const existingSchedule = await prisma.schedule.findFirst({
+            where: { id: scheduleId },
+            include: {
+                service: true,
+                user: true,
+            }
+        })
+
+        if (!existingSchedule) {
+            return new Response(JSON.stringify({ error: "Turno no encontrado" }), {
+                status: 404,
+                headers: { 'Content-Type': 'application/json' }
+            })
+        }
+
+        const realDate = new Date(existingSchedule.date);
+        const date = realDate.toLocaleDateString("es-AR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
+        const time = realDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" });
+
         const { data, error } = await resend.emails.send({
             from: process.env.EMAIL_FROM!,
-            to: [email],
+            to: [existingSchedule.user.email],
             subject: "Tu turno ha sido reservado.",
             react: EmailTemplate({
-                name,
-                lastname,
-                date,
-                time,
-                serviceName
+                name: existingSchedule.user.name,
+                lastname: existingSchedule.user.lastname,
+                date: date,
+                time: time,
+                serviceName: existingSchedule.service.name
             })
         });
 
@@ -42,8 +64,8 @@ export async function POST(request: Request) {
             headers: { 'Content-Type': 'application/json' }
         })
     } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        return new Response(JSON.stringify({error: errorMessage}), {
+        console.error("Error sending email:", error);
+        return new Response(JSON.stringify({error: "Error interno del servidor"}), {
             status: 500,
             headers: { 'Content-Type': 'application/json' }
         })
