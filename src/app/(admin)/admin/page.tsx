@@ -36,7 +36,7 @@ export default async function AdminPage({ searchParams }: Props) {
                         -
                     </p>
                     <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
-                        Hoy: {new Date().toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric" })}
+                        Hoy: {new Date().toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Argentina/Buenos_Aires"})}
                     </p>
                 </div>
                 <DatesList datesQuery={datesQuery} />
