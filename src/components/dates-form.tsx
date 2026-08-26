@@ -195,19 +195,6 @@ function DatesForm({ services, dates }: Props) {
                 } else {
                     router.push(`/turnos/resumen?id=${scheduleData.data.id}`);
                 }
-
-                const sendResponse = await fetch("/api/send", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ scheduleId: scheduleData.data.id }),
-                })
-
-                if (!sendResponse.ok) {
-                    const data = await sendResponse.json();
-                    console.error("Error al solicitar el turno:", data);
-                }
             }
 
 
