@@ -7,8 +7,8 @@ import { FaCheck } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Select from "./select";
 
-function splitDateTime(raw: string) {
-    const normalized = raw.replace("T", " ");
+function splitDateTime(raw: Date) {
+    const normalized = raw.toISOString().replace("T", " ");
     const [datePart, timePart = ""] = normalized.split(" ");
     const time = timePart.slice(0, 5);
     return { datePart, time };
@@ -204,7 +204,7 @@ function DateCard({ date, dates }: Props) {
                 <div className="flex items-center flex-col sm:flex-row gap-4">
                     <Button size="small" disabled={date.status === "completado"} onClick={() => {
                         setEditingDate(date);
-                        setEditForm({ date: date.date, time: "", status: date.status });
+                        setEditForm({ date: date.date.toISOString(), time: "", status: date.status });
                     }}>
                         Editar
                     </Button>

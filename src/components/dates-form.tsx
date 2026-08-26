@@ -45,8 +45,8 @@ const timeSlots = [
 
 const STEPS = ["Elegir servicio", "Elegir turno", "Tus datos", "Resumen"];
 
-function splitDateTime(raw: string) {
-    const normalized = raw.replace("T", " ");
+function splitDateTime(raw: Date) {
+    const normalized = raw.toISOString().replace("T", " ");
     const [datePart, timePart = ""] = normalized.split(" ");
     const time = timePart.slice(0, 5);
     return { datePart, time };
