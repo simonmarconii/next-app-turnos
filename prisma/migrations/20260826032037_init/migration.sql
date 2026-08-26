@@ -5,7 +5,7 @@ CREATE TYPE "PaymentMethods" AS ENUM ('tarjeta', 'transferencia');
 CREATE TYPE "PaymentStatus" AS ENUM ('pendiente', 'aprobado', 'rechazado', 'cancelado');
 
 -- CreateEnum
-CREATE TYPE "ScheduleStatus" AS ENUM ('pendiente_pago', 'confirmado', 'cancelado', 'completado');
+CREATE TYPE "ScheduleStatus" AS ENUM ('pendiente', 'confirmado', 'cancelado', 'completado');
 
 -- CreateTable
 CREATE TABLE "schedule" (
@@ -14,7 +14,7 @@ CREATE TABLE "schedule" (
     "date" TIMESTAMP(6) NOT NULL,
     "service_id" UUID NOT NULL DEFAULT gen_random_uuid(),
     "user_id" UUID NOT NULL DEFAULT gen_random_uuid(),
-    "status" "ScheduleStatus" NOT NULL DEFAULT 'pendiente_pago',
+    "status" "ScheduleStatus" NOT NULL DEFAULT 'pendiente',
     "updated_at" TIMESTAMPTZ(6) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "expires_in" TIMESTAMPTZ(6),
 
@@ -53,7 +53,7 @@ CREATE TABLE "payment" (
     "amount" REAL NOT NULL,
     "status" "PaymentStatus" NOT NULL DEFAULT 'pendiente',
     "payment_method" VARCHAR,
-    "external_payment_id" UUID DEFAULT gen_random_uuid(),
+    "external_payment_id" VARCHAR,
 
     CONSTRAINT "payment_pkey" PRIMARY KEY ("id")
 );

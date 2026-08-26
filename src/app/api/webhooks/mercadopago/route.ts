@@ -4,8 +4,6 @@ import { Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } from
 import { NextRequest } from "next/server";
 import { sendEmail } from "@/lib/email";
 
-import crypto from "crypto";
-
 const paymentClient = new Payment(mercadoPagoClient);
 
 export async function POST(request: NextRequest) {
