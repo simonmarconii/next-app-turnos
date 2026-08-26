@@ -1,39 +1,26 @@
 import DatesForm from "@/components/dates-form";
-import { getBaseUrl } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 export default async function SchedulesPage() {
-    let datesData = [];
+    const supabase = await createClient();
+
     let servicesData = [];
+    let datesData = [];
 
-    const baseUrl = getBaseUrl();
+    const { data: services, error: servicesError } = await supabase.from("service").select("*");
 
-    const datesResponse = await fetch(`${baseUrl}/api/schedule`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-    });
-
-    if (!datesResponse.ok) {
-        console.error("Failed to fetch dates:", datesResponse.statusText);
+    if (servicesError) {
+        console.error("Error fetching services:", servicesError.message);
     } else {
-        const data = await datesResponse.json();
-        datesData = data.data ?? [];
+        servicesData = services;
     }
 
+    const { data: dates, error: datesError } = await supabase.from("schedule").select("*");
 
-    const servicesResponse = await fetch(`${baseUrl}/api/service`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-    });
-
-    if (!servicesResponse.ok) {
-        console.error("Failed to fetch services:", servicesResponse.statusText);
+    if (datesError) {
+        console.error("Error fetching dates:", datesError.message);
     } else {
-        const data = await servicesResponse.json();
-        servicesData = data.data ?? [];
+        datesData = dates;
     }
 
     return (
