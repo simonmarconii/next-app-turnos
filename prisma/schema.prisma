@@ -52,7 +52,7 @@ model payment {
   amount              Float         @db.Real
   status              PaymentStatus @default(pendiente)
   payment_method      String?       @db.VarChar
-  external_payment_id String?       @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  external_payment_id String?       @db.VarChar
   schedule            schedule      @relation(fields: [schedule_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
