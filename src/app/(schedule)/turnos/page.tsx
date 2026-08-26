@@ -14,7 +14,8 @@ export default async function SchedulesPage() {
     if (!datesResponse.ok) {
         console.error("Failed to fetch dates:", datesResponse.statusText);
     } else {
-        datesData = await datesResponse.json();
+        const data = await datesResponse.json();
+        datesData = data.data ?? [];
     }
 
 
@@ -28,10 +29,11 @@ export default async function SchedulesPage() {
     if (!servicesResponse.ok) {
         console.error("Failed to fetch services:", servicesResponse.statusText);
     } else {
-        servicesData = await servicesResponse.json();
+        const data = await servicesResponse.json();
+        servicesData = data.data ?? [];
     }
 
     return (
-        <DatesForm services={servicesData.data} dates={datesData.data} />
+        <DatesForm services={servicesData} dates={datesData} />
     );
 }
