@@ -1,25 +1,29 @@
 import ServicesClient from "@/components/service-client";
-import { getBaseUrl } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
+import { ServiceType } from "@/types/service";
 
 async function ServicesData() {
-  const baseUrl = getBaseUrl();
+  let services: ServiceType[] = [];
 
-  const response = await fetch(`${baseUrl}/api/service`, {
-    cache: "no-store",
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const services = await response.json();
+  try {
+    const servicesData = await prisma.service.findMany();
 
-  return <ServicesClient initialServices={services.data} />;
+    if (!servicesData) {
+      console.error("Services not found");
+    }
+
+    services = servicesData;
+  } catch (error) {
+    console.error("Error fetching services:", error);
+  }
+
+  return <ServicesClient initialServices={services} />;
 }
 
 export default function ServicesList() {
   return (
     <div>
-        <ServicesData />
+      <ServicesData />
     </div>
   );
 }
