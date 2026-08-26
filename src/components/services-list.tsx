@@ -1,7 +1,10 @@
 import ServicesClient from "@/components/service-client";
+import { getBaseUrl } from "@/lib/utils";
 
 async function ServicesData() {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/service`, {
+  const baseUrl = getBaseUrl();
+
+  const response = await fetch(`${baseUrl}/api/service`, {
     cache: "no-store",
     method: "GET",
     headers: {

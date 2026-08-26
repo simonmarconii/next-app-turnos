@@ -1,10 +1,13 @@
 import DatesForm from "@/components/dates-form";
+import { getBaseUrl } from "@/lib/utils";
 
 export default async function SchedulesPage() {
     let datesData = [];
     let servicesData = [];
 
-    const datesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule`, {
+    const baseUrl = getBaseUrl();
+
+    const datesResponse = await fetch(`${baseUrl}/api/schedule`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -19,7 +22,7 @@ export default async function SchedulesPage() {
     }
 
 
-    const servicesResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/service`, {
+    const servicesResponse = await fetch(`${baseUrl}/api/service`, {
         method: "GET",
         headers: {
             "Content-Type": "application/json",

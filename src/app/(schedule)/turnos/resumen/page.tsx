@@ -1,3 +1,5 @@
+import { getBaseUrl } from "@/lib/utils";
+
 type Props = {
     searchParams: Promise<{
         id?: string;
@@ -7,13 +9,15 @@ type Props = {
 export default async function ResumePage({ searchParams }: Props) {
     const { id } = await searchParams;
 
+    const baseUrl = getBaseUrl();
+
     if (!id) {
         return (
             <div>Turno no encontrado</div>
         )
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/schedule/${id}`, {
+    const response = await fetch(`${baseUrl}/api/schedule/${id}`, {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',

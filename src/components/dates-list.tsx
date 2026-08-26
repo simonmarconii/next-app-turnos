@@ -1,13 +1,16 @@
 import { DateType } from "@/types/date";
 import DateCard from "./date-card";
 import FilterBar from "./filter-bar";
+import { getBaseUrl } from "@/lib/utils";
 
 type Props = {
     datesQuery: string;
 };
 
 export default async function DatesList({ datesQuery }: Props) {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/schedules?search_dates=${datesQuery}`, {
+    const baseUrl = getBaseUrl();
+
+    const response = await fetch(`${baseUrl}/api/admin/schedules?search_dates=${datesQuery}`, {
         cache: "no-store",
         method: "GET",
         headers: {
