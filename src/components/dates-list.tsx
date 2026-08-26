@@ -18,6 +18,12 @@ export default async function DatesList({ datesQuery }: Props) {
         },
     })
 
+    if (!response.ok) {
+        return (
+            <p>Error</p>
+        )
+    }
+
     const dates = await response.json();
 
     return (
