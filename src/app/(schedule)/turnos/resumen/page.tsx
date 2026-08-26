@@ -1,4 +1,5 @@
-import { getBaseUrl } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
+import { DateType } from "@/types/date";
 
 type Props = {
     searchParams: Promise<{
@@ -9,34 +10,42 @@ type Props = {
 export default async function ResumePage({ searchParams }: Props) {
     const { id } = await searchParams;
 
-    const baseUrl = getBaseUrl();
-
     if (!id) {
         return (
             <div>Turno no encontrado</div>
         )
     }
 
-    const response = await fetch(`${baseUrl}/api/schedule/${id}`, {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        cache: 'no-store',
-    });
+    let datesData: DateType = null;
 
-    const data = await response.json();
+    try {
+        const schedule = await prisma.schedule.findFirst({
+            where: { id },
+            include: {
+                service: true,
+                user: true,
+            }
+        });
 
-    if (data.error) {
+        if (!schedule) {
+            console.error("No schedule found");
+        }
+
+        datesData = schedule;
+    } catch (error) {
+        console.error("Error fetching schedule:", error);
+    }
+
+    if (!datesData) {
         return (
             <div className="h-full flex flex-col items-center justify-center gap-2">
                 <p className="text-4xl font-bold">404</p>
-                <p className="text-3xl">{data.error}</p>
+                <p className="text-3xl">Turno no encontrado</p>
             </div> 
         )
     }
 
-    const realDate = new Date(data.data.date);
+    const realDate = new Date(datesData.date);
     const date = realDate.toLocaleString("es-AR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
     const time = realDate.toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" });
 
@@ -46,10 +55,10 @@ export default async function ResumePage({ searchParams }: Props) {
                 <div className="px-6 py-8 sm:px-8">
                     <div>
                         <p className="text-center text-xl font-medium text-[#1f1a16]">
-                            {`¡Gracias por confirmar tu turno ${data.data.user.name}! Hemos recibido tu solicitud para el servicio ${data.data.service.name} el día ${date} a las ${time} .`}
+                            {`¡Gracias por confirmar tu turno ${datesData.user?.name}! Hemos recibido tu solicitud para el servicio ${datesData.service?.name} el día ${date} a las ${time} .`}
                         </p>
                         <p className="text-center text-sm text-[#4d4037]"> 
-                            Te enviaremos más información a tu correo electrónico: {data.data.user.email}. Por favor, revisá en spam si no lo ves en tu bandeja de entrada.
+                            Te enviaremos más información a tu correo electrónico: {datesData.user?.email}. Por favor, revisá en spam si no lo ves en tu bandeja de entrada.
                         </p>
                     </div>
                 </div>

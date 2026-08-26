@@ -1,39 +1,39 @@
 import DatesForm from "@/components/dates-form";
-import { getBaseUrl } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
+import { DateType } from "@/types/date";
+import { ServiceType } from "@/types/service";
 
 export default async function SchedulesPage() {
-    let datesData = [];
-    let servicesData = [];
+    let servicesData: ServiceType[] = [];
+    let datesData: DateType[] = [];
 
-    const baseUrl = getBaseUrl();
+    try {
+        const services = await prisma.service.findMany();
 
-    const datesResponse = await fetch(`${baseUrl}/api/schedule`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-    });
+        if (!services) {
+            console.error("No services found");
+        }
 
-    if (!datesResponse.ok) {
-        console.error("Failed to fetch dates:", datesResponse.statusText);
-    } else {
-        const data = await datesResponse.json();
-        datesData = data.data ?? [];
+        servicesData = services;
+    } catch (error) {
+        console.error("Error fetching services:", error);
     }
 
+    try {
+        const schedules = await prisma.schedule.findMany({
+            include: { service: true },
+            where: { 
+                status: "confirmado",
+            }
+        });
 
-    const servicesResponse = await fetch(`${baseUrl}/api/service`, {
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-    });
+        if (!schedules) {
+            console.error("No schedules found");
+        }
 
-    if (!servicesResponse.ok) {
-        console.error("Failed to fetch services:", servicesResponse.statusText);
-    } else {
-        const data = await servicesResponse.json();
-        servicesData = data.data ?? [];
+        datesData = schedules;
+    } catch (error) {
+        console.error("Error fetching schedules:", error);
     }
 
     return (

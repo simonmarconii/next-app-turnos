@@ -1,24 +1,52 @@
 import { DateType } from "@/types/date";
 import DateCard from "./date-card";
 import FilterBar from "./filter-bar";
-import { getBaseUrl } from "@/lib/utils";
+import { prisma } from "@/lib/prisma";
 
 type Props = {
     datesQuery: string;
 };
 
 export default async function DatesList({ datesQuery }: Props) {
-    const baseUrl = getBaseUrl();
+    let dates: DateType[] = []
 
-    const response = await fetch(`${baseUrl}/api/admin/schedules?search_dates=${datesQuery}`, {
-        cache: "no-store",
-        method: "GET",
-        headers: {
-            "Content-Type": "application/json",
-        },
-    })
+    let clause = {
+        status: {}
+    };
 
-    const dates = await response.json();
+    if (datesQuery === "completed") {
+        clause = {
+            status: "completado"
+        }
+    } else if (datesQuery === "confirmed") {
+        clause = {
+            status: "confirmado"
+        }
+    } else if (datesQuery === "all") {
+        clause = {
+            status: {
+                in: ["completado", "confirmado"]
+            }
+        }
+    }
+
+    try {
+        const schedules = await prisma.schedule.findMany({
+            include: {user: true, service: true},
+            orderBy: {date: "asc"},
+            where: {
+                ...clause,       
+            }
+        });
+
+        if (!schedules) {
+            console.error("Schedules not found");
+        }
+
+        dates = schedules;
+    } catch (error) {
+        console.error("Error fetching schedules:", error);
+    }
 
     return (
         <div className="space-y-3">
@@ -27,9 +55,9 @@ export default async function DatesList({ datesQuery }: Props) {
             </div>
             <div className="grid gap-3 grid-cols-1 lg:grid-cols-2">
                 <>
-                    {dates.data && (
-                        dates.data.map((date: DateType) => (
-                            <DateCard key={date.id} date={date} dates={dates.data} />
+                    {dates && (
+                        dates.map((date: DateType) => (
+                            <DateCard key={date.id} date={date} dates={dates} />
                         ))
                     )}
                 </>
