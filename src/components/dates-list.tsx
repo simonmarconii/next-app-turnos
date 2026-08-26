@@ -57,7 +57,7 @@ export default async function DatesList({ datesQuery }: Props) {
                 <>
                     {dates && (
                         dates.map((date: DateType) => (
-                            <DateCard key={date.id} date={date} dates={dates} />
+                            <DateCard key={date!.id} date={date} dates={dates} />
                         ))
                     )}
                 </>

@@ -36,7 +36,7 @@ type Props = {
 function DateCard({ date, dates }: Props) {
     const [editingDate, setEditingDate] = useState<DateType | null>(null);
     const [completeDate, setCompleteDate] = useState<DateType | null>( null);
-    const [editForm, setEditForm] = useState({ date: new Date(date.date).toISOString(), time: "", status: date.status });
+    const [editForm, setEditForm] = useState({ date: new Date(date!.date).toISOString(), time: "", status: date!.status });
 
     const router = useRouter();
 
@@ -60,7 +60,7 @@ function DateCard({ date, dates }: Props) {
         and finally return an array of the times that are already booked
          */
         return dates
-            .map((d) => splitDateTime(d.date))
+            .map((d) => splitDateTime(d!.date))
             .filter((d) => d.datePart === editForm.date)
             .map((d) => d.time);
     }, [dates, editForm.date]);
@@ -161,7 +161,7 @@ function DateCard({ date, dates }: Props) {
                         Dia:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {new Date(date.date).toLocaleString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" })}
+                        {new Date(date!.date).toLocaleString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" })}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -169,7 +169,7 @@ function DateCard({ date, dates }: Props) {
                         Hora:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {new Date(date.date).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" })}
+                        {new Date(date!.date).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" })}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -177,7 +177,7 @@ function DateCard({ date, dates }: Props) {
                         Cliente:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {date.user.name} {date.user.lastname}
+                        {date!.user?.name} {date!.user?.lastname}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -185,7 +185,7 @@ function DateCard({ date, dates }: Props) {
                         Servicio:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {date.service.name} - ${date.service.price}
+                        {date!.service?.name} - ${date!.service?.price}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -193,22 +193,22 @@ function DateCard({ date, dates }: Props) {
                         Estado:
                     </p>
                     <p className="text-sm font-medium text-[#1f1a16]">
-                        {date.status === "pendiente" && "Turno pendiente"}
-                        {date.status === "confirmado" && "Turno confirmado"}
-                        {date.status === "cancelado" && "Turno cancelado"}
-                        {date.status === "completado" && "Turno completado"}
+                        {date!.status === "pendiente" && "Turno pendiente"}
+                        {date!.status === "confirmado" && "Turno confirmado"}
+                        {date!.status === "cancelado" && "Turno cancelado"}
+                        {date!.status === "completado" && "Turno completado"}
                     </p>
                 </div>
             </div>
             <div className="">
                 <div className="flex items-center flex-col sm:flex-row gap-4">
-                    <Button size="small" disabled={date.status === "completado"} onClick={() => {
+                    <Button size="small" disabled={date!.status === "completado"} onClick={() => {
                         setEditingDate(date);
-                        setEditForm({ date: date.date.toISOString(), time: "", status: date.status });
+                        setEditForm({ date: date!.date.toISOString(), time: "", status: date!.status });
                     }}>
                         Editar
                     </Button>
-                    <Button size="small" variant="secondary" disabled={date.status === "completado"} onClick={() => setCompleteDate(date)}>
+                    <Button size="small" variant="secondary" disabled={date!.status === "completado"} onClick={() => setCompleteDate(date)}>
                         <FaCheck className="text-xl" />
                     </Button>
                 </div>

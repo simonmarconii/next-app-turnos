@@ -91,7 +91,7 @@ function DatesForm({ services, dates }: Props) {
     const bookedTimesForSelectedDate = useMemo(() => {
         if (!formData.date) return [];
         return dates
-            .map((d) => splitDateTime(d.date))
+            .map((d) => splitDateTime(d!.date))
             .filter((d) => d.datePart === formData.date)
             .map((d) => d.time);
     }, [dates, formData.date]);
