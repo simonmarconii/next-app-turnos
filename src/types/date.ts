@@ -1,15 +1,17 @@
 import { UserType } from "./user";
 import { ServiceType } from "./service";
+import { ScheduleStatus } from "../../generated/prisma";
 
 export type DateType = {
+    service?: ServiceType;
+    user?: UserType;
+} & {
     id: string;
-    user_id: string;
-    user: UserType;
+    created_at: Date;
+    date: Date;
     service_id: string;
-    service: ServiceType;
-    date: string;
-    status: "pendiente" | "confirmado" | "cancelado" | "completado";
-    expires_in: string | null;
-    updated_at: string;
-    created_at: string;
-}
+    user_id: string;
+    status: ScheduleStatus;
+    updated_at: Date;
+    expires_in: Date | null;
+} | null;

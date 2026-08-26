@@ -1,6 +1,7 @@
 export type ServiceType = {
     id: string;
+    created_at: Date;
     name: string;
     price: number;
-    created_at: string;
+    active: boolean;
 }
