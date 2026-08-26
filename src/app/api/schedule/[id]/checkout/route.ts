@@ -12,7 +12,7 @@ type RouteParams = {
 export async function POST(request: Request, context: RouteParams) {
     const { id } = await context.params;
 
-    const result = z.string().uuid().safeParse(id);
+    const result = z.uuid().safeParse(id);
 
     if (!result.success) {
         return new Response(JSON.stringify({ error: "Turno no encontrado" }), {

@@ -3,11 +3,7 @@ import { resend } from "@/lib/resend";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
-export async function POST(request: Request) {
-    const body = await request.json();
-
-    const { scheduleId } = body;
-
+export async function sendEmail(scheduleId: string) {
     const result = z.uuid().safeParse(scheduleId);
 
     if (!result.success) {

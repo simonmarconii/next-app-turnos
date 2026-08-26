@@ -2,20 +2,28 @@ import { prisma } from "@/lib/prisma";
 import mercadoPagoClient from "@/lib/mercadopago";
 import { Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } from "mercadopago";
 import { NextRequest } from "next/server";
+import { sendEmail } from "@/lib/email";
+
+import crypto from "crypto";
 
 const paymentClient = new Payment(mercadoPagoClient);
 
 export async function POST(request: NextRequest) {
+
+    const { searchParams } = new URL(request.url);
+
     const xSignature = request.headers.get('x-signature');
     const xRequestId = request.headers.get('x-request-id');
-    const dataId = request.headers.get('data.id');
+    const dataId = searchParams.get('data.id');
+
+    const secret = process.env.MERCADO_PAGO_SECRET_KEY!;
 
     try {
         WebhookSignatureValidator.validate({
             xSignature,
             xRequestId,
             dataId,
-            secret: `${process.env.MERCADO_PAGO_SECRET_KEY}`
+            secret
         })
     } catch (error) {
         if (error instanceof InvalidWebhookSignatureError) {
@@ -66,6 +74,8 @@ export async function POST(request: NextRequest) {
                         payment_method: payment.payment_method?.type,
                     }
                 });
+
+                await sendEmail(scheduleId);
             } else if (payment.status === 'rejected') {
                 await tx.payment.deleteMany({
                     where: { schedule_id: scheduleId }
