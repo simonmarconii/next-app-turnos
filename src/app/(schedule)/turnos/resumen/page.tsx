@@ -53,9 +53,12 @@ export default async function ResumePage({ searchParams }: Props) {
         <main className="mx-auto h-full flex items-center justify-center max-w-3xl px-4 sm:px-6 lg:px-8">
             <div className={`overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
                 <div className="px-6 py-8 sm:px-8">
-                    <div>
-                        <p className="text-center text-xl font-medium text-[#1f1a16]">
-                            {`¡Gracias por confirmar tu turno ${datesData.user?.name}! Hemos recibido tu solicitud para el servicio ${datesData.service?.name} el día ${date} a las ${time} .`}
+                    <div className="flex flex-col gap-4">
+                        <p className="text-center text-2xl font-medium text-[#1f1a16]">
+                           {`¡Gracias por confirmar tu turno ${datesData.user?.name}!`} 
+                        </p>
+                        <p className="text-xl text-center font-medium text-[#1f1a16]">
+                            {`Hemos recibido tu solicitud para el servicio ${datesData.service?.name} el día ${date} a las ${time} .`}
                         </p>
                         <p className="text-center text-sm text-[#4d4037]"> 
                             Te enviaremos más información a tu correo electrónico: {datesData.user?.email}. Por favor, revisá en spam si no lo ves en tu bandeja de entrada.
