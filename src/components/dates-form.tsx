@@ -194,6 +194,17 @@ function DatesForm({ services, dates }: Props) {
                     router.push(checkoutData.data.init_point);
                 } else {
                     router.push(`/turnos/resumen?id=${scheduleData.data.id}`);
+                    const emailResponse = await fetch(`/api/send`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ scheduleId: scheduleData.data.id }),
+                    })
+
+                    if (!emailResponse.ok) {
+                        console.error("Error al enviar el email de aviso");
+                    }
                 }
             }
 
@@ -206,7 +217,7 @@ function DatesForm({ services, dates }: Props) {
     }
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 lg:px-8 lg:py-32">
+    <main className="mx-auto w-full max-w-3xl py-16 lg:py-32">
         <div className={`overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
             <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                 <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">
