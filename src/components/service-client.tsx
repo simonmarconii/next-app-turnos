@@ -74,7 +74,7 @@ export default function ServicesClient({
           initialServices.map((service) => (
             <div
               key={service.id}
-              className="flex flex-col gap-4 rounded-2xl border border-[#d8cabd] bg-white p-4 shadow-sm"
+              className="flex flex-col gap-4 rounded-2xl border border-[#cdbfae] bg-white p-4 shadow-sm"
             >
               <div>
                 <p className="text-base font-semibold text-[#1f1a16]">
@@ -106,7 +106,7 @@ export default function ServicesClient({
 
       {editingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-          <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+          <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
@@ -132,7 +132,7 @@ export default function ServicesClient({
                       price: parseFloat(e.target.value),
                     })
                   }
-                  className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                  className="rounded-2xl border border-[#cdbfae] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                 />
                 {error && (
                   <div className="text-lg text-red-600">
@@ -159,7 +159,7 @@ export default function ServicesClient({
 
       {deletingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-          <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+          <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
             <div className="flex flex-col gap-5">
               <div className="flex items-start justify-between gap-4">
                 <div>

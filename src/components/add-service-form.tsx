@@ -57,8 +57,8 @@ export default function AddServiceForm() {
     }
 
     return (
-        <div className={`flex flex-col gap-4 rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.05)] sm:p-8`}>
-            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82] border-b border-[#d8cabd] pb-2">
+        <div className={`flex flex-col gap-4 rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.05)] sm:p-8`}>
+            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82] border-b border-[#cdbfae] pb-2">
                 Agregar nuevo servicio
             </p>
             <form className="space-y-6" onSubmit={handleAddService}>
@@ -69,7 +69,7 @@ export default function AddServiceForm() {
                         name="name"
                         value={newService!.name}
                         onChange={(e) => setNewService({ ...newService!, name: e.target.value })}
-                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15" 
+                        className="rounded-2xl border border-[#cdbfae] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15" 
                     />
                     {error.name && (
                         <div className="text-lg text-red-600">
@@ -86,7 +86,7 @@ export default function AddServiceForm() {
                         onChange={(e) => {
                             setNewService({ ...newService!, price: parseFloat(e.target.value) })}
                         }
-                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                        className="rounded-2xl border border-[#cdbfae] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
                     />
                     {error.price && (
                         <div className="text-lg text-red-600">

@@ -153,7 +153,7 @@ function DateCard({ date, dates }: Props) {
   return (
     <>
         <div
-            className="flex gap-2 sm:justify-between rounded-2xl border border-[#e4d6c8] bg-white px-4 py-3 shadow-sm"
+            className="flex gap-2 sm:justify-between rounded-2xl border border-[#cdbfae] bg-white px-4 py-3 shadow-sm"
         >
             <div>
                 <div className="flex items-center gap-2">
@@ -217,7 +217,7 @@ function DateCard({ date, dates }: Props) {
 
         {editingDate && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-                <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+                <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
@@ -292,7 +292,7 @@ function DateCard({ date, dates }: Props) {
 
         {completeDate && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-                <div className="w-full max-w-md rounded-[2rem] border border-[#d8cabd] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+                <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
                 <div className="flex flex-col gap-5">
                     <div className="flex items-start justify-between gap-4">
                         <div>
