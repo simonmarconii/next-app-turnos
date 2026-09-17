@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from "react";
 import Button from "./button";
-import { ServiceType } from "@/types/service";
+import { ServiceType } from "@/lib/definitions";
 import { useRouter } from "next/navigation";
 
 interface ServicesClientProps {

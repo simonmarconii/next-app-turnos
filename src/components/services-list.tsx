@@ -1,6 +1,6 @@
 import ServicesClient from "@/components/service-client";
 import { prisma } from "@/lib/prisma";
-import { ServiceType } from "@/types/service";
+import { ServiceType } from "@/lib/definitions";
 
 async function ServicesData() {
   let services: ServiceType[] = [];

@@ -1,4 +1,4 @@
-import { DateType } from "@/types/date";
+import { DateType } from "@/lib/definitions";
 import DateCard from "./date-card";
 import FilterBar from "./filter-bar";
 import { prisma } from "@/lib/prisma";

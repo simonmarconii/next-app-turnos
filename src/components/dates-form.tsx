@@ -1,7 +1,7 @@
 "use client";
 
-import { DateType } from '@/types/date';
-import { ServiceType } from '@/types/service';
+import { DateType } from '@/lib/definitions';
+import { ServiceType } from '@/lib/definitions';
 import { useMemo, useState } from 'react'
 import Button from './button';
 import { MdOutlinePayment } from "react-icons/md";

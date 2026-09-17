@@ -1,7 +1,7 @@
 import DatesForm from "@/components/dates-form";
 import { prisma } from "@/lib/prisma";
-import { DateType } from "@/types/date";
-import { ServiceType } from "@/types/service";
+import { DateType } from "@/lib/definitions";
+import { ServiceType } from "@/lib/definitions";
 
 export default async function SchedulesPage() {
     let servicesData: ServiceType[] = [];

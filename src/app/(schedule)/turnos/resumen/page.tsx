@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { DateType } from "@/types/date";
+import { DateType } from "@/lib/definitions";
 
 type Props = {
     searchParams: {

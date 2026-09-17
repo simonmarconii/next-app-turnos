@@ -1,6 +1,6 @@
 "use client";
 
-import { DateType } from "@/types/date";
+import { DateType } from "@/lib/definitions";
 import Button from "./button";
 import { FormEvent, useMemo, useState } from "react";
 import { FaCheck } from "react-icons/fa";
