@@ -14,7 +14,13 @@ export async function POST(request: NextRequest) {
     const xRequestId = request.headers.get('x-request-id');
     const dataId = searchParams.get('data.id');
 
-    const secret = process.env.MERCADO_PAGO_SECRET_KEY!;
+    const secret = process.env.MERCADO_PAGO_SECRET_KEY;
+    if (!secret) {
+        return new Response("Server misconfiguration", {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+        });
+    }
 
     try {
         WebhookSignatureValidator.validate({
@@ -46,6 +52,8 @@ export async function POST(request: NextRequest) {
             return new Response("Missing references", { status: 400 });
         }
 
+        let shouldSendEmail = false;
+
         await prisma.$transaction(async (tx) => {
             const currentSchedule = await tx.schedule.findUnique({
                 where: { id: scheduleId }
@@ -73,7 +81,7 @@ export async function POST(request: NextRequest) {
                     }
                 });
 
-                await sendEmail(scheduleId);
+                shouldSendEmail = true;
             } else if (payment.status === 'rejected') {
                 await tx.payment.deleteMany({
                     where: { schedule_id: scheduleId }
@@ -85,12 +93,19 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        return new Response(null, { status: 200 });
+        if (shouldSendEmail) {
+            await sendEmail(scheduleId);
+        }
+
+        return new Response(null, {
+            status: 200,
+            headers: { 'Cache-Control': 'no-store' }
+        });
     } catch (error) {
         console.error("Error processing webhook:", error);
         return new Response(JSON.stringify({error: "Error interno del servidor"}), {
             status: 500,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
         })
     }
 }
