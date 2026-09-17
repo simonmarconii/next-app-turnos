@@ -172,8 +172,9 @@ function DatesForm({ services, dates }: Props) {
             });
 
             if (!scheduleResponse.ok) {
-                const data = await scheduleResponse.json();
+                const data = await scheduleResponse.json().catch(() => null);
                 console.error("Error al solicitar el turno:", data);
+                return;
             } else {
                 const scheduleData = await scheduleResponse.json();
 
@@ -186,8 +187,10 @@ function DatesForm({ services, dates }: Props) {
                     });
         
                     if (!checkoutResponse.ok) {
-                        const data = await scheduleResponse.json();
-                        throw new Error(data.message || "Error al solicitar el turno");
+                        const data = await checkoutResponse.json().catch(() => null);
+                        console.error("Error en checkout", data);
+                        setLoading(false);
+                        return;
                     }
         
                     const checkoutData = await checkoutResponse.json();
@@ -210,7 +213,7 @@ function DatesForm({ services, dates }: Props) {
 
 
         } catch (error) {
-            throw new Error("Error al solicitar el turno: " + error);
+            console.error("Error al solicitar el turno:", error);
         } finally {
             setLoading(false);
         }

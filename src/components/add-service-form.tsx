@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 export default function AddServiceForm() {
     const [newService, setNewService] = useState({ name: "", price: 0 });
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState<{
         name?: string[] | null;
         price?: string[] | null;
@@ -18,6 +19,8 @@ export default function AddServiceForm() {
 
     async function handleAddService(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
+        if (loading) return;
+        setLoading(true);
         setError({
             name: null,
             price: null
@@ -53,6 +56,7 @@ export default function AddServiceForm() {
             console.error("Error al agregar el servicio:", error);
         } finally {
             setNewService({ name: "", price: 0 });
+            setLoading(false);
         }
     }
 
@@ -95,7 +99,7 @@ export default function AddServiceForm() {
                     )}
                 </div>
                 <div className="pt-2">
-                    <Button type="submit" size="medium">
+                    <Button type="submit" size="medium" disabled={loading}>
                         Agregar
                     </Button>
                 </div>

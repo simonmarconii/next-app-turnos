@@ -16,11 +16,14 @@ export default function ServicesClient({
   const [deletingService, setDeletingService] = useState<ServiceType | null>( null);
   const [editForm, setEditForm] = useState({ price: 0 });
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   const router = useRouter();
 
   async function handleDeleteService(serviceId: string) {
     try {
+      if (submitting) return;
+      setSubmitting(true);
       const response = await fetch(`/api/service/${serviceId}`, {
         method: "DELETE",
         headers: {
@@ -29,19 +32,24 @@ export default function ServicesClient({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete service");
+        console.error("Failed to delete service", response.status);
+        return;
       }
 
       setDeletingService(null);
       router.refresh();
     } catch (error) {
-      throw new Error("Failed to delete service: " + error);
+      console.error("Failed to delete service:", error);
+    } finally {
+      setSubmitting(false);
     }
   }
 
   async function handleUpdateService(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!editingService) return;
+    if (submitting) return;
+    setSubmitting(true);
     setError(null);
 
     try {
@@ -64,6 +72,8 @@ export default function ServicesClient({
       }
     } catch (error) {
       console.error("Failed to update service: " + error);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -106,13 +116,19 @@ export default function ServicesClient({
 
       {editingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-          <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="edit-service-title"
+            tabIndex={-1}
+            className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]"
+          >
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
                   Editar servicio
                 </p>
-                <h2 className="mt-2 text-xl font-semibold text-[#1f1a16]">
+                <h2 id="edit-service-title" className="mt-2 text-xl font-semibold text-[#1f1a16]">
                   {editingService.name}
                 </h2>
               </div>
@@ -145,10 +161,11 @@ export default function ServicesClient({
                   onClick={() => setEditingService(null)}
                   variant="outline"
                   size="medium"
+                  disabled={submitting}
                 >
                   Cancelar
                 </Button>
-                <Button type="submit" size="medium">
+                <Button type="submit" size="medium" disabled={submitting}>
                   Guardar cambios
                 </Button>
               </div>
@@ -159,14 +176,20 @@ export default function ServicesClient({
 
       {deletingService && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-          <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-service-title"
+            tabIndex={-1}
+            className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]"
+          >
             <div className="flex flex-col gap-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
                     Eliminar servicio
                   </p>
-                  <h2 className="mt-2 text-xl font-semibold text-[#1f1a16]">
+                  <h2 id="delete-service-title" className="mt-2 text-xl font-semibold text-[#1f1a16]">
                     ¿Desea eliminar {deletingService.name}?
                   </h2>
                 </div>
@@ -176,6 +199,7 @@ export default function ServicesClient({
                   onClick={() => setDeletingService(null)}
                   variant="outline"
                   size="medium"
+                  disabled={submitting}
                 >
                   Cancelar
                 </Button>
@@ -183,6 +207,7 @@ export default function ServicesClient({
                   onClick={() => handleDeleteService(deletingService.id)}
                   variant="destructive"
                   size="medium"
+                  disabled={submitting}
                 >
                   Eliminar
                 </Button>

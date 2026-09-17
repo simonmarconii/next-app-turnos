@@ -36,6 +36,7 @@ type Props = {
 function DateCard({ date, dates }: Props) {
     const [editingDate, setEditingDate] = useState<DateType | null>(null);
     const [completeDate, setCompleteDate] = useState<DateType | null>( null);
+    const [submitting, setSubmitting] = useState(false);
     const [editForm, setEditForm] = useState({ date: new Date(date!.date).toISOString(), time: "", status: date!.status });
 
     const router = useRouter();
@@ -76,6 +77,8 @@ function DateCard({ date, dates }: Props) {
     async function handleCompleteDateStatus(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!completeDate ) return;
+        if (submitting) return;
+        setSubmitting(true);
 
         try {
             const response = await fetch(`/api/schedule/${completeDate.id}/status`, {
@@ -87,13 +90,17 @@ function DateCard({ date, dates }: Props) {
             });
 
             if (!response.ok) {
-                throw new Error("Failed to update date status");
+                console.error("Failed to update date status", response.status);
+                return;
             } else {
                 setCompleteDate(null);
                 router.refresh();
             }
         } catch (error) {
-            throw new Error("Failed to update date status: " + error);
+            console.error("Failed to update date status:", error);
+        }
+        finally {
+            setSubmitting(false);
         }
     }
 
@@ -125,6 +132,8 @@ function DateCard({ date, dates }: Props) {
         event.preventDefault();
         if (!editingDate) return;
         if (!editForm.date && !editForm.time) return;
+        if (submitting) return;
+        setSubmitting(true);
 
         try {
             const response = await fetch(`/api/schedule/${editingDate.id}/date`, {
@@ -139,13 +148,17 @@ function DateCard({ date, dates }: Props) {
             });
 
             if (!response.ok) {
-                console.error("Failed to update date:", response.statusText);
+                console.error("Failed to update date:", response.status);
+                return;
             } else {
                 setEditingDate(null);
                 router.refresh();
             }
         } catch (error) {
-            throw new Error("Failed to update date: " + error);
+            console.error("Failed to update date:", error);
+        }
+        finally {
+            setSubmitting(false);
         }
     }
 
@@ -217,13 +230,19 @@ function DateCard({ date, dates }: Props) {
 
         {editingDate && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-                <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="edit-turno-title"
+                    tabIndex={-1}
+                    className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]"
+                >
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
                                 Editar turno
                             </p>
-                            <h2 className="mt-2 text-lg font-semibold text-[#1f1a16]">
+                            <h2 id="edit-turno-title" className="mt-2 text-lg font-semibold text-[#1f1a16]">
                                 Turno del {new Date(editingDate.date).toLocaleString("es-AR", { 
                                     year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" 
                                 })}
@@ -278,10 +297,11 @@ function DateCard({ date, dates }: Props) {
                                 onClick={() => setEditingDate(null)}
                                 variant="outline"
                                 size="medium"
+                                disabled={submitting}
                             >
                                 Cancelar
                             </Button>
-                            <Button type="submit">
+                            <Button type="submit" disabled={submitting}>
                                 Guardar cambios
                             </Button>
                         </div>
@@ -292,14 +312,20 @@ function DateCard({ date, dates }: Props) {
 
         {completeDate && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
-                <div className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]">
+                <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="complete-turno-title"
+                    tabIndex={-1}
+                    className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]"
+                >
                 <div className="flex flex-col gap-5">
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
                                 Completar turno
                             </p>
-                            <h2 className="mt-2 text-lg font-semibold text-[#1f1a16]">
+                            <h2 id="complete-turno-title" className="mt-2 text-lg font-semibold text-[#1f1a16]">
                                 ¿Desea completar el turno del {new Date(completeDate.date).toLocaleString("es-AR", { 
                                 weekday: "long", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" 
                                 })}?
@@ -311,6 +337,7 @@ function DateCard({ date, dates }: Props) {
                             onClick={() => setCompleteDate(null)}
                             variant="outline"
                             size="medium"
+                            disabled={submitting}
                         >
                             Cancelar
                         </Button>
@@ -318,6 +345,7 @@ function DateCard({ date, dates }: Props) {
                             type="submit"
                             variant="secondary"
                             size="medium"
+                            disabled={submitting}
                         >
                             Completar
                         </Button>
