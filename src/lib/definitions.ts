@@ -1,6 +1,21 @@
-import { UserType } from "./user";
-import { ServiceType } from "./service";
 import { ScheduleStatus } from "../../generated/prisma";
+
+export type ServiceType = {
+    id: string;
+    created_at: Date;
+    name: string;
+    price: number;
+    active: boolean;
+}
+
+export type UserType = {
+    id: string;
+    created_at: Date;
+    name: string;
+    lastname: string;
+    email: string;
+    phone: string;
+}
 
 export type DateType = {
     service?: ServiceType;
