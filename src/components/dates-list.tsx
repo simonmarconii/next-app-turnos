@@ -2,17 +2,23 @@ import { DateType } from "@/types/date";
 import DateCard from "./date-card";
 import FilterBar from "./filter-bar";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@/../generated/prisma";
 
 type Props = {
     datesQuery: string;
 };
 
 export default async function DatesList({ datesQuery }: Props) {
-    let dates: DateType[] = []
+    let dates: DateType[] = [];
 
-    let clause = {
-        status: {}
-    };
+    let clause: Prisma.scheduleWhereInput =
+        datesQuery === "completed"
+            ? { status: "completado" }
+            : datesQuery === "confirmed"
+                ? { status: "confirmado" }
+                : datesQuery === "all"
+                    ? { status: { in: ["completado", "confirmado"] } }
+                    : {};
 
     if (datesQuery === "completed") {
         clause = {
@@ -35,15 +41,11 @@ export default async function DatesList({ datesQuery }: Props) {
             include: {user: true, service: true},
             orderBy: {date: "asc"},
             where: {
-                ...clause,       
+                ...clause,
             }
         });
 
-        if (!schedules) {
-            console.error("Schedules not found");
-        }
-
-        dates = schedules;
+        dates = schedules as DateType[];
     } catch (error) {
         console.error("Error fetching schedules:", error);
     }
