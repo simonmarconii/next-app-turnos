@@ -1,13 +1,11 @@
 import Link from "next/link";
 import { FaUserCircle } from "react-icons/fa";
-import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 import LogoutButton from "./logout-button";
+import { getUser } from "@/lib/get-user";
+
 
 export default async function Navbar() {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await getUser();
 
     return (
         <nav className="fixed inset-x-0 top-0 z-50 border-b border-[#d8ccb9]/80 bg-[#f6f1e8]/90 backdrop-blur-xl">
