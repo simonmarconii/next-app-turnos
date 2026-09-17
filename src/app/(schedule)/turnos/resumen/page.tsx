@@ -2,13 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { DateType } from "@/types/date";
 
 type Props = {
-    searchParams: Promise<{
+    searchParams: {
         id?: string;
-    }>
+    };
 };
 
 export default async function ResumePage({ searchParams }: Props) {
-    const { id } = await searchParams;
+    const { id } = searchParams;
 
     if (!id) {
         return (
