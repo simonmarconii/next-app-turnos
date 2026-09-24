@@ -4,6 +4,7 @@ import { useState, FormEvent } from "react";
 import Button from "./button";
 import { ServiceType } from "@/lib/definitions";
 import { useRouter } from "next/navigation";
+import { deleteService, updateService } from "@/lib/actions";
 
 interface ServicesClientProps {
   initialServices: ServiceType[];
@@ -24,15 +25,10 @@ export default function ServicesClient({
     try {
       if (submitting) return;
       setSubmitting(true);
-      const response = await fetch(`/api/service/${serviceId}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
+      const result = await deleteService(serviceId);
 
-      if (!response.ok) {
-        console.error("Failed to delete service", response.status);
+      if (!result.success) {
+        console.error("Failed to delete service", result.error);
         return;
       }
 
@@ -53,19 +49,10 @@ export default function ServicesClient({
     setError(null);
 
     try {
-      const response = await fetch(`/api/service/${editingService.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          price: editForm.price,
-        }),
-      });
+      const result = await updateService(editingService.id, editForm.price);
 
-      if (!response.ok) {
-        const data = await response.json();
-        setError(data.error);
+      if (!result.success) {
+        setError(result.error);
       } else {
         setEditingService(null);
         router.refresh();

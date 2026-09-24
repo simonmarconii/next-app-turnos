@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Button from "./button";
 import { useRouter } from "next/navigation";
+import { createService } from "@/lib/actions";
 
 export default function AddServiceForm() {
     const [newService, setNewService] = useState({ name: "", price: 0 });
@@ -27,26 +28,20 @@ export default function AddServiceForm() {
         });
 
         try {
-            const response = await fetch("/api/service", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(newService),
-            });
+            const result = await createService(newService);
 
-            if (!response.ok) {
-                const data = await response.json();
-                if (data.error.name) {
+            if (!result.success) {
+                const fieldErrors = result.fieldErrors;
+                if (fieldErrors?.name) {
                     setError((prevError) => ({
                         ...prevError,
-                        name: data.error.name,
+                        name: fieldErrors.name,
                     }));
                 }
-                if (data.error.price) {
+                if (fieldErrors?.price) {
                     setError((prevError) => ({
                         ...prevError,
-                        price: data.error.price,
+                        price: fieldErrors.price,
                     }));
                 }
             } else {

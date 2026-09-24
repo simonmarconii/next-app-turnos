@@ -6,6 +6,7 @@ import { FormEvent, useMemo, useState } from "react";
 import { FaCheck } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Select from "./select";
+import { updateScheduleDate, updateScheduleStatus } from "@/lib/actions";
 
 function splitDateTime(raw: Date) {
     const normalized = raw.toISOString().replace("T", " ");
@@ -81,16 +82,10 @@ function DateCard({ date, dates }: Props) {
         setSubmitting(true);
 
         try {
-            const response = await fetch(`/api/schedule/${completeDate.id}/status`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ status: "completado" }),
-            });
+            const result = await updateScheduleStatus(completeDate.id, "completado");
 
-            if (!response.ok) {
-                console.error("Failed to update date status", response.status);
+            if (!result.success) {
+                console.error("Failed to update date status", result.error);
                 return;
             } else {
                 setCompleteDate(null);
@@ -104,30 +99,6 @@ function DateCard({ date, dates }: Props) {
         }
     }
 
-    /*async function handlePayDateStatus(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        if ( !editingDate ) return;
-
-        try {
-            const response = await fetch(`/api/schedule/${editingDate.id}/status`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ status: "confirmado" }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to update date status");
-            } else {
-                setEditingDate(null);
-                router.refresh();
-            }
-        } catch (error) {
-            throw new Error("Failed to update date status: " + error);
-        }
-    }*/
-
     async function handleUpdateDate(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         if (!editingDate) return;
@@ -136,19 +107,13 @@ function DateCard({ date, dates }: Props) {
         setSubmitting(true);
 
         try {
-            const response = await fetch(`/api/schedule/${editingDate.id}/date`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    date: editForm.date,
-                    time: editForm.time,
-                }),
+            const result = await updateScheduleDate(editingDate.id, {
+                date: editForm.date,
+                time: editForm.time,
             });
 
-            if (!response.ok) {
-                console.error("Failed to update date:", response.status);
+            if (!result.success) {
+                console.error("Failed to update date:", result.error);
                 return;
             } else {
                 setEditingDate(null);

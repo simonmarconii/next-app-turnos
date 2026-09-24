@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { z } from "zod";
 import { dateSchema } from '@/schemas/schedule';
 import { userScheduleSchema } from '@/schemas/user';
+import { createCheckout, createSchedule } from '@/lib/actions';
 
 type FormData = {
     paymentMethod: string;
@@ -163,51 +164,24 @@ function DatesForm({ services, dates }: Props) {
         setLoading(true);
 
         try {
-            const scheduleResponse = await fetch("/api/schedule", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-            });
+            const scheduleResult = await createSchedule(formData);
 
-            if (!scheduleResponse.ok) {
-                const data = await scheduleResponse.json().catch(() => null);
-                console.error("Error al solicitar el turno:", data);
+            if (!scheduleResult.success) {
+                console.error("Error al solicitar el turno:", scheduleResult.error);
                 return;
             } else {
-                const scheduleData = await scheduleResponse.json();
-
                 if (formData.paymentMethod === "transferencia") {
-                    const checkoutResponse = await fetch(`/api/schedule/${scheduleData.data.id}/checkout`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                    });
-        
-                    if (!checkoutResponse.ok) {
-                        const data = await checkoutResponse.json().catch(() => null);
-                        console.error("Error en checkout", data);
+                    const checkoutResult = await createCheckout(scheduleResult.data.id);
+
+                    if (!checkoutResult.success || !checkoutResult.data.initPoint) {
+                        console.error("Error en checkout", checkoutResult.success ? "URL de pago vacía" : checkoutResult.error);
                         setLoading(false);
                         return;
                     }
-        
-                    const checkoutData = await checkoutResponse.json();
-                    router.push(checkoutData.data.init_point);
-                } else {
-                    router.push(`/turnos/resumen?id=${scheduleData.data.id}`);
-                    const emailResponse = await fetch(`/api/send`, {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({ scheduleId: scheduleData.data.id }),
-                    })
 
-                    if (!emailResponse.ok) {
-                        console.error("Error al enviar el email de aviso");
-                    }
+                    router.push(checkoutResult.data.initPoint);
+                } else {
+                    router.push(`/turnos/resumen?id=${scheduleResult.data.id}`);
                 }
             }
 

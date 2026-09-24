@@ -3,6 +3,7 @@
 import Button from "@/components/button";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { login } from "@/lib/actions";
 
 type FormData = {
     email: string;
@@ -37,17 +38,10 @@ export default function LoginPage() {
         setLoading(true);
 
         try {
-            const response = await fetch(`/api/auth/login`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(formData),
-            })
+            const result = await login(formData);
 
-            if (!response.ok) {
-                const data = await response.json();
-                setError(data.error);
+            if (!result.success) {
+                setError(result.error);
             } else {
                 router.push("/admin");
                 router.refresh();
