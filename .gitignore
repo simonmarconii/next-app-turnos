@@ -51,4 +51,6 @@ skills-lock.json
 
 # vscode
 .vscode/*
-.vercel
+
+# vitest
+.vitest/
