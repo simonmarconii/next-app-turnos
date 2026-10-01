@@ -2,7 +2,8 @@ import { prisma } from "@/lib/prisma";
 import mercadoPagoClient from "@/lib/mercadopago";
 import { Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } from "mercadopago";
 import { NextRequest } from "next/server";
-import { sendEmail } from "@/lib/email";
+import EmailTemplate from "@/components/email-template";
+import { formatEmailDateTime, sendEmail } from "@/lib/email";
 
 const paymentClient = new Payment(mercadoPagoClient);
 
@@ -94,7 +95,27 @@ export async function POST(request: NextRequest) {
         });
 
         if (shouldSendEmail) {
-            await sendEmail(scheduleId);
+            const schedule = await prisma.schedule.findUnique({
+                where: { id: scheduleId },
+                include: { service: true, user: true },
+            });
+
+            if (!schedule) {
+                throw new Error("Turno no encontrado");
+            }
+
+            const { date, time } = formatEmailDateTime(schedule.date);
+            await sendEmail({
+                to: schedule.user.email,
+                subject: "Tu turno ha sido reservado.",
+                react: EmailTemplate({
+                    name: schedule.user.name,
+                    lastname: schedule.user.lastname,
+                    date,
+                    time,
+                    serviceName: schedule.service.name,
+                }),
+            });
         }
 
         return new Response(null, {

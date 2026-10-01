@@ -3,13 +3,16 @@
 import { cookies } from "next/headers";
 import { Preference } from "mercadopago";
 import { z } from "zod";
+import EmailTemplate from "@/components/email-template";
+import RescheduledEmailTemplate from "@/components/rescheduled-email-template";
 import { prisma } from "@/lib/prisma";
 import mercadoPagoClient from "@/lib/mercadopago";
 import { createClient } from "@/lib/supabase/server";
-import { sendEmail } from "@/lib/email";
+import { formatEmailDateTime, sendEmail } from "@/lib/email";
 import { dateSchema, scheduleSchema } from "@/schemas/schedule";
 import { priceSchema, serviceSchema } from "@/schemas/service";
 import { userLoginSchema } from "@/schemas/user";
+import { getBookingDateError } from "@/lib/booking-date-range";
 
 type ActionResult<T = undefined> =
     | { success: true; data: T }
@@ -52,6 +55,9 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
         return { success: false, error: "Fecha inválida" };
     }
 
+    const bookingDateError = getBookingDateError(date);
+    if (bookingDateError) return { success: false, error: bookingDateError };
+
     try {
         let user = await prisma.user.findFirst({ where: { email } });
 
@@ -93,7 +99,18 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
         // está aislada para poder reutilizarla desde otras features.
         if (paymentMethod !== "transferencia") {
             try {
-                await sendEmail(newSchedule.id);
+                const { date, time } = formatEmailDateTime(newSchedule.date);
+                await sendEmail({
+                    to: user.email,
+                    subject: "Tu turno ha sido reservado.",
+                    react: EmailTemplate({
+                        name: user.name,
+                        lastname: user.lastname,
+                        date,
+                        time,
+                        serviceName: newSchedule.service.name,
+                    }),
+                });
             } catch (error) {
                 // El turno ya fue creado; un fallo del proveedor de email no
                 // debe convertir una reserva válida en una reserva fallida.
@@ -172,15 +189,16 @@ export async function createCheckout(scheduleId: string): Promise<ActionResult<{
     }
 }
 
-export async function updateScheduleDate(
+export async function rescheduleSchedule(
     scheduleId: string,
     input: unknown,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ emailSent: boolean }>> {
     await requireAuthenticatedUser();
-    const parsedDate = z.uuid().safeParse(scheduleId);
+
+    const parsedId = z.uuid().safeParse(scheduleId);
     const parsed = dateSchema.safeParse(input);
 
-    if (!parsedDate.success) return { success: false, error: "Turno no encontrado" };
+    if (!parsedId.success) return { success: false, error: "Turno no encontrado" };
     if (!parsed.success) {
         return {
             success: false,
@@ -191,6 +209,9 @@ export async function updateScheduleDate(
 
     const realDate = new Date(`${parsed.data.date}T${parsed.data.time}:00.000Z`);
     if (Number.isNaN(realDate.getTime())) return { success: false, error: "Fecha inválida" };
+
+    const bookingDateError = getBookingDateError(parsed.data.date);
+    if (bookingDateError) return { success: false, error: bookingDateError };
 
     try {
         await prisma.$transaction(async (tx) => {
@@ -203,7 +224,31 @@ export async function updateScheduleDate(
             });
         });
 
-        return { success: true, data: undefined };
+        try {
+            const schedule = await prisma.schedule.findUnique({
+                where: { id: scheduleId },
+                include: { service: true, user: true },
+            });
+
+            if (!schedule) throw new Error("Turno no encontrado");
+
+            const { date, time } = formatEmailDateTime(schedule.date);
+            await sendEmail({
+                to: schedule.user.email,
+                subject: "Tu turno fue reprogramado.",
+                react: RescheduledEmailTemplate({
+                    name: schedule.user.name,
+                    lastname: schedule.user.lastname,
+                    date,
+                    time,
+                    serviceName: schedule.service.name,
+                }),
+            });
+            return { success: true, data: { emailSent: true } };
+        } catch (error) {
+            console.error("Error al enviar el email de reprogramación:", error);
+            return { success: true, data: { emailSent: false } };
+        }
     } catch (error) {
         if (error instanceof Error && error.message === "Turno no encontrado") {
             return { success: false, error: error.message };
@@ -297,20 +342,6 @@ export async function deleteService(serviceId: string): Promise<ActionResult> {
     }
 }
 
-// Sin uso actualmente pero se deja para poder reutilizarlo desde el panel admin en el futuro.
-export async function sendScheduleEmail(scheduleId: string): Promise<ActionResult> {
-    await requireAuthenticatedUser();
-    const parsedId = z.uuid().safeParse(scheduleId);
-    if (!parsedId.success) return { success: false, error: "Turno no encontrado" };
-
-    try {
-        await sendEmail(scheduleId);
-        return { success: true, data: undefined };
-    } catch (error) {
-        return actionError(error);
-    }
-}
-
 export async function login(input: unknown): Promise<ActionResult> {
     const parsed = userLoginSchema.safeParse(input);
     if (!parsed.success) {
@@ -332,4 +363,3 @@ export async function login(input: unknown): Promise<ActionResult> {
         return actionError(error);
     }
 }
-

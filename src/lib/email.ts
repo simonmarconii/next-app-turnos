@@ -1,34 +1,38 @@
-import EmailTemplate from "@/components/email-template";
+import type { ReactElement } from "react";
 import { resend } from "@/lib/resend";
-import { prisma } from "@/lib/prisma";
 
-export async function sendEmail(scheduleId: string) {
-    const existingSchedule = await prisma.schedule.findUnique({
-            where: { id: scheduleId },
-            include: {
-                service: true,
-                user: true,
-            }
-        });
+export type SendEmailInput = {
+    to: string | string[];
+    subject: string;
+    react: ReactElement;
+    from?: string;
+};
 
-    if (!existingSchedule) throw new Error("Turno no encontrado");
+export function formatEmailDateTime(rawDate: Date) {
+    const realDate = new Date(rawDate);
+    const date = realDate.toLocaleDateString("es-AR", {
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+        timeZone: "America/Argentina/Buenos_Aires",
+    });
+    const time = realDate.toLocaleTimeString("es-AR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+        timeZone: "America/Argentina/Buenos_Aires",
+    });
 
-    const realDate = new Date(existingSchedule.date);
-    const date = realDate.toLocaleDateString("es-AR", { year: "numeric", month: "numeric", day: "numeric", timeZone: "America/Argentina/Buenos_Aires" });
-    const time = realDate.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Argentina/Buenos_Aires" });
+    return { date, time };
+}
 
+export async function sendEmail({ to, subject, react, from }: SendEmailInput) {
     const { data, error } = await resend.emails.send({
-            from: process.env.EMAIL_FROM!,
-            to: [existingSchedule.user.email],
-            subject: "Tu turno ha sido reservado.",
-            react: EmailTemplate({
-                name: existingSchedule.user.name,
-                lastname: existingSchedule.user.lastname,
-                date: date,
-                time: time,
-                serviceName: existingSchedule.service.name
-            })
-        });
+        from: from ?? process.env.EMAIL_FROM!,
+        to,
+        subject,
+        react,
+    });
 
     if (error) throw new Error(error.message);
 
