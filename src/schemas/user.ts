@@ -6,8 +6,8 @@ export const userLoginSchema = z.object({
 })
 
 export const userScheduleSchema = z.object({
-    name: z.string().min(1, { message: "El nombre es obligatorio" }),
-    lastname: z.string().min(1, { message: "El apellido es obligatorio" }),
+    name: z.string().trim().min(1, { message: "El nombre es obligatorio" }),
+    lastname: z.string().trim().min(1, { message: "El apellido es obligatorio" }),
     email: z.string().email({ message: "El correo electrónico no es válido" }),
-    phone: z.string().min(1, { message: "El teléfono es obligatorio" }),
+    phone: z.string().trim().min(1, { message: "El teléfono es obligatorio" }),
 })
