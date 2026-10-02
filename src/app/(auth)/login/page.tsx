@@ -77,6 +77,8 @@ export default function LoginPage() {
                                     name="email"
                                     type="email"
                                     value={formData.email}
+                                    aria-invalid={Boolean(error)}
+                                    aria-describedby={error ? "login-error" : undefined}
                                     onChange={(event) => updateField("email", event.target.value)}
                                     className={`rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
                                 />
@@ -90,6 +92,8 @@ export default function LoginPage() {
                                     name="password"
                                     type="password"
                                     value={formData.password}
+                                    aria-invalid={Boolean(error)}
+                                    aria-describedby={error ? "login-error" : undefined}
                                     onChange={(event) => updateField("password", event.target.value)}
                                     className={`rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15`}
                                 />
@@ -101,7 +105,7 @@ export default function LoginPage() {
                             </Button>
                         </div>
                         {error && (
-                            <div className="text-lg text-red-600">
+                            <div id="login-error" role="alert" className="text-lg text-[#b42318]">
                                 {error}
                             </div>
                         )}

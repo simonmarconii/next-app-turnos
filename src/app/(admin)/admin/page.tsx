@@ -18,39 +18,40 @@ export default async function AdminPage({ searchParams }: Props) {
 
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
-            <div className="rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.06)] sm:p-8">
-                <h1 className="text-3xl font-semibold text-[#1f1a16] sm:text-4xl">
+            <header className="rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.06)] sm:p-8">
+                <p className="text-sm font-semibold text-[#4f6d60]">Panel de gestión</p>
+                <h1 className="mt-2 text-3xl font-semibold text-[#1f1a16] sm:text-4xl">
                     Bienvenido, {user?.email}
                 </h1>
                 <p className="mt-3 text-sm leading-6 text-[#4d4037]">
                     Gestioná los turnos y servicios de tu negocio desde este panel de administración.
                 </p>
-            </div>
+            </header>
 
-            <div className="flex flex-col gap-2 rounded-[2rem] border border-[#cdbfae] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
-                <div className="flex flex-col items-center gap-1 md:flex-row md:gap-4">
-                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
-                        Turnos
-                    </p>
-                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
-                        -
-                    </p>
-                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+            <section className="flex flex-col gap-4 rounded-[2rem] border border-[#cdbfae] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
+                <div className="flex flex-col gap-2 border-b border-[#d8cabd] pb-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <h2 className="text-2xl font-semibold text-[#1f1a16]">Turnos</h2>
+                        <p className="mt-1 text-sm text-[#5c4f44]">
+                            Gestioná las reservas confirmadas y completadas.
+                        </p>
+                    </div>
+                    <p className="text-sm font-medium capitalize text-[#4f6d60]">
                         Hoy: {new Date().toLocaleDateString("es-AR", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Argentina/Buenos_Aires"})}
                     </p>
                 </div>
                 <DatesList datesQuery={datesQuery} />
-            </div>
+            </section>
 
-            <div className="flex flex-col gap-6">
+            <section className="flex flex-col gap-6">
                 <div className="flex flex-col gap-4 rounded-[2rem] border border-[#cdbfae] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
-                    <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82] border-b border-[#cdbfae] pb-2">
+                    <h2 className="border-b border-[#cdbfae] pb-3 text-2xl font-semibold text-[#1f1a16]">
                         Servicios disponibles
-                    </p>
+                    </h2>
+                    <AddServiceForm />
                     <ServicesList />
                 </div>
-                <AddServiceForm />
-            </div>
+            </section>
         </div>
     )
 }

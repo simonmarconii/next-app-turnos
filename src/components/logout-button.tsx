@@ -25,7 +25,7 @@ function LogoutButton() {
 
   return (
     <Button variant="secondary" size="small" onClick={handleLogout}>
-      Logout
+      Cerrar sesión
     </Button>
   );
 }

@@ -16,13 +16,16 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[#1f1a16]/52" />
         <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl rounded-[2rem] border border-white/20 bg-[#f8f3eb]/90 p-6 text-[#1f1a16] shadow-[0_24px_70px_rgba(0,0,0,0.2)] backdrop-blur-md sm:p-8 lg:p-10">
-            <p className="max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
-              Disfruta de un espacio pensado para una atención prolija, tranquila y con foco en la higiene.
+            <h1 className="mt-4 max-w-2xl text-3xl font-semibold leading-tight tracking-tight sm:text-4xl lg:text-5xl">
+              Cuidado especializado para tus pies, con tiempo y atención personalizada.
+            </h1>
+            <p className="mt-5 max-w-xl text-base leading-7 text-[#5c4f44] sm:text-lg">
+              Disfrutá un espacio tranquilo, prolijo y pensado para que te sientas bien desde el primer momento.
             </p>
             <div className="mt-8">
               <a
                 href="/turnos"
-                className="inline-flex items-center justify-center rounded-full bg-[#b56b49] px-8 py-4 text-base font-semibold text-[#fff8f1] shadow-lg shadow-[#b56b49]/20 transition hover:bg-[#a95f40]"
+                className="inline-flex whitespace-nowrap rounded-full bg-[#914b32] px-4 py-4.5 text-xl font-semibold text-[#fff8f1] shadow-[0_8px_18px_rgba(145,75,50,0.22)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#7d3f2b] hover:shadow-[0_10px_22px_rgba(145,75,50,0.28)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#914b32] active:translate-y-0 sm:px-8"
               >
                 Reservar turno
               </a>

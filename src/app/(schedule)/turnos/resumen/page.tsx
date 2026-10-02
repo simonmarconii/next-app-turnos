@@ -8,7 +8,7 @@ type Props = {
 };
 
 export default async function ResumePage({ searchParams }: Props) {
-    const { id } = searchParams;
+    const { id } = await searchParams;
 
     if (!id) {
         return (

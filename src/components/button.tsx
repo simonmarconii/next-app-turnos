@@ -10,12 +10,13 @@ type ButtonProps = {
     type?: "button" | "submit" | "reset";
     disabled?: boolean;
     className?: string;
+    "aria-label"?: string;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
-    primary: "bg-[#b56b49] text-[#fff8f1] transition hover:bg-[#a95f40]",
-    secondary: "bg-[#6f8f82] text-[#fff8f1] transition hover:bg-[#5e7a6f]",
-    destructive: "bg-red-500 text-[#fff8f1] transition hover:bg-red-600",
+    primary: "bg-[#914b32] text-[#fff8f1] transition hover:bg-[#7d3f2b]",
+    secondary: "bg-[#4f6d60] text-[#fff8f1] transition hover:bg-[#40594e]",
+    destructive: "bg-[#b42318] text-[#fff8f1] transition hover:bg-[#951b12]",
     outline: "border border-[#d8cabd] text-[#4d4037] transition hover:bg-[#efe6d8]"
 }
 
@@ -25,9 +26,9 @@ const sizeStyles: Record<ButtonSize, string> = {
     large: "px-7 py-4 text-lg"
 }
 
-export default function Button({ children, onClick, variant = "primary", size = "medium", type = "button", disabled, className }: ButtonProps) {
+export default function Button({ children, onClick, variant = "primary", size = "medium", type = "button", disabled, className, "aria-label": ariaLabel }: ButtonProps) {
     return (
-        <button type={type} disabled={disabled} className={`${className} rounded-full font-semibold ${variantStyles[variant]} ${sizeStyles[size]} ${disabled ? 'cursor-not-allowed' : ''}`} onClick={onClick}>
+        <button type={type} disabled={disabled} aria-label={ariaLabel} className={`${className ?? ""} rounded-full font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#914b32] ${variantStyles[variant]} ${sizeStyles[size]} ${disabled ? 'cursor-not-allowed opacity-55' : ''}`} onClick={onClick}>
             {children}
         </button>
     );
