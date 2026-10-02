@@ -13,6 +13,8 @@ import { z } from "zod";
 import { dateSchema } from '@/schemas/schedule';
 import { userScheduleSchema } from '@/schemas/user';
 import { createCheckout, createSchedule } from '@/lib/actions';
+import DatePicker from './date-picker';
+import { getBookingDateError } from '@/lib/booking-date-range';
 
 type FormData = {
     paymentMethod: string;
@@ -126,8 +128,9 @@ function DatesForm({ services, dates }: Props) {
 
         if (step === 1) {
             const result = dateSchema.safeParse({ date: formData.date, time: formData.time });
-            if (!result.success) {
-                newErrors.stepTwo = "Por favor, completá todos los campos de fecha y hora.";
+            const dateError = result.success ? getBookingDateError(formData.date) : null;
+            if (!result.success || dateError) {
+                newErrors.stepTwo = dateError ?? "Por favor, completá todos los campos de fecha y hora.";
             }
         }
 
@@ -195,8 +198,8 @@ function DatesForm({ services, dates }: Props) {
 
   return (
     <main className="mx-auto w-full max-w-3xl py-16 lg:py-32">
-        <div className={`overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
-            <div className="border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
+        <div className={`overflow-visible rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
+            <div className="rounded-t-[2rem] border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                 <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">
                     Turnos
                 </p>
@@ -242,7 +245,7 @@ function DatesForm({ services, dates }: Props) {
                                             ))}
                                         </select>
                                     </Select>
-                                    {errors.stepOne && <p className="text-md text-red-600">{errors.stepOne}</p>}
+                                    {errors.stepOne && <p role="alert" className="text-md text-[#b42318]">{errors.stepOne}</p>}
                                 </div>
                             </section>
                         ) : step === 1 ? (
@@ -251,13 +254,12 @@ function DatesForm({ services, dates }: Props) {
                                     <label htmlFor="date" className="text-sm font-medium text-[#4d4037]">
                                         Fecha
                                     </label>
-                                    <input
+                                    <DatePicker
                                         id="date"
-                                        name="date"
-                                        type="date"
                                         value={formData.date}
-                                        onChange={(event) => handleDateChange(event.target.value)}
-                                        className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
+                                        onChange={handleDateChange}
+                                        ariaDescribedBy={errors.stepTwo ? "step-two-error" : undefined}
+                                        hasError={Boolean(errors.stepTwo)}
                                     />
                                 </div>
 
@@ -265,13 +267,15 @@ function DatesForm({ services, dates }: Props) {
                                     <label htmlFor="time" className="text-sm font-medium text-[#4d4037]">
                                         Horario
                                     </label>
-                                    <Select>
+                                    <Select disabled={!formData.date}>
                                         <select
                                             id="time"
                                             name="time"
                                             value={formData.time}
                                             onChange={(event) => updateField("time", event.target.value)}
                                             disabled={!formData.date}
+                                            aria-describedby={errors.stepTwo ? "step-two-error" : undefined}
+                                            aria-invalid={Boolean(errors.stepTwo)}
                                             className="block w-full appearance-none bg-transparent pr-8 outline-none"
                                         >
                                             <option value="">Elegí un horario</option>
@@ -291,7 +295,7 @@ function DatesForm({ services, dates }: Props) {
                                         </select>
                                     </Select>
                                 </div>
-                                {errors.stepTwo && <p className="text-md text-red-600">{errors.stepTwo}</p>}
+                                {errors.stepTwo && <p id="step-two-error" role="alert" className="text-md text-[#b42318]">{errors.stepTwo}</p>}
                             </section>
                         ) : step === 2 ? (
                             <section className="grid gap-6">
@@ -354,7 +358,7 @@ function DatesForm({ services, dates }: Props) {
                                         />
                                     </div>
                                 </div>
-                                {errors.stepThree && <p className="text-md text-red-600">{errors.stepThree}</p>}
+                                {errors.stepThree && <p role="alert" className="text-md text-[#b42318]">{errors.stepThree}</p>}
                             </section>
                         ) : (
                             <section className="grid gap-6">
@@ -419,7 +423,7 @@ function DatesForm({ services, dates }: Props) {
                                             </div>
                                         </Button>
                                     </div>
-                                    {errors.stepFour && <p className="text-md text-red-600 py-2">{errors.stepFour}</p>}
+                                    {errors.stepFour && <p role="alert" className="text-md text-[#b42318] py-2">{errors.stepFour}</p>}
                                 </div>
                             </section>
                         )}

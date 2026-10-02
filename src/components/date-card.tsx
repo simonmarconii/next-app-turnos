@@ -6,13 +6,19 @@ import { FormEvent, useMemo, useState } from "react";
 import { FaCheck } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import Select from "./select";
-import { updateScheduleDate, updateScheduleStatus } from "@/lib/actions";
+import DatePicker from "./date-picker";
+import { rescheduleSchedule, updateScheduleStatus } from "@/lib/actions";
 
 function splitDateTime(raw: Date) {
     const normalized = raw.toISOString().replace("T", " ");
     const [datePart, timePart = ""] = normalized.split(" ");
     const time = timePart.slice(0, 5);
     return { datePart, time };
+}
+
+function getEditFormValues(raw: Date) {
+    const { datePart, time } = splitDateTime(raw);
+    return { date: datePart, time };
 }
 
 type FormData = {
@@ -38,7 +44,7 @@ function DateCard({ date, dates }: Props) {
     const [editingDate, setEditingDate] = useState<DateType | null>(null);
     const [completeDate, setCompleteDate] = useState<DateType | null>( null);
     const [submitting, setSubmitting] = useState(false);
-    const [editForm, setEditForm] = useState({ date: new Date(date!.date).toISOString(), time: "", status: date!.status });
+    const [editForm, setEditForm] = useState({ ...getEditFormValues(date!.date), status: date!.status });
 
     const router = useRouter();
 
@@ -62,10 +68,11 @@ function DateCard({ date, dates }: Props) {
         and finally return an array of the times that are already booked
          */
         return dates
+            .filter((currentDate) => currentDate?.id !== editingDate?.id)
             .map((d) => splitDateTime(d!.date))
             .filter((d) => d.datePart === editForm.date)
             .map((d) => d.time);
-    }, [dates, editForm.date]);
+    }, [dates, editForm.date, editingDate?.id]);
 
     function handleDateChange(value: string) {
         setEditForm((current) => ({ ...current, date: value, time: "" }));
@@ -107,7 +114,7 @@ function DateCard({ date, dates }: Props) {
         setSubmitting(true);
 
         try {
-            const result = await updateScheduleDate(editingDate.id, {
+            const result = await rescheduleSchedule(editingDate.id, {
                 date: editForm.date,
                 time: editForm.time,
             });
@@ -116,6 +123,9 @@ function DateCard({ date, dates }: Props) {
                 console.error("Failed to update date:", result.error);
                 return;
             } else {
+                if (!result.data.emailSent) {
+                    console.error("El turno fue reprogramado, pero no se pudo enviar el email");
+                }
                 setEditingDate(null);
                 router.refresh();
             }
@@ -170,23 +180,20 @@ function DateCard({ date, dates }: Props) {
                     <p className="text-sm font-bold text-[#1f1a16]">
                         Estado:
                     </p>
-                    <p className="text-sm font-medium text-[#1f1a16]">
-                        {date!.status === "pendiente" && "Turno pendiente"}
-                        {date!.status === "confirmado" && "Turno confirmado"}
-                        {date!.status === "cancelado" && "Turno cancelado"}
-                        {date!.status === "completado" && "Turno completado"}
-                    </p>
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${date!.status === "confirmado" ? "bg-[#e7ece4] text-[#40594e]" : "bg-[#efe6d8] text-[#7d3f2b]"}`}>
+                            {date!.status === "confirmado" ? "Confirmado" : "Completado"}
+                        </span>
                 </div>
             </div>
             <div className="">
                 <div className="flex items-center flex-col sm:flex-row gap-4">
                     <Button size="small" disabled={date!.status === "completado"} onClick={() => {
                         setEditingDate(date);
-                        setEditForm({ date: date!.date.toISOString(), time: "", status: date!.status });
+                        setEditForm({ ...getEditFormValues(date!.date), status: date!.status });
                     }}>
-                        Editar
+                        Reprogramar
                     </Button>
-                    <Button size="small" variant="secondary" disabled={date!.status === "completado"} onClick={() => setCompleteDate(date)}>
+                    <Button aria-label="Completar turno" size="small" variant="secondary" disabled={date!.status === "completado"} onClick={() => setCompleteDate(date)}>
                         <FaCheck className="text-xl" />
                     </Button>
                 </div>
@@ -194,44 +201,44 @@ function DateCard({ date, dates }: Props) {
         </div>
 
         {editingDate && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/70 px-4 py-6 backdrop-blur-sm">
                 <div
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="edit-turno-title"
                     tabIndex={-1}
-                    className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]"
+                    className="max-h-[calc(100svh-2rem)] w-full max-w-lg overflow-y-auto rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] shadow-[0_24px_70px_rgba(31,26,22,0.24)]"
                 >
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
-                                Editar turno
+                    <div className="border-b border-[#d8cabd] bg-gradient-to-br from-[#eef3ec] via-[#f8f3eb] to-[#f4e7da] px-6 py-6 sm:px-8">
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                            <p className="text-sm font-semibold text-[#4f6d60]">
+                                {editingDate.status === "confirmado" ? "Reprogramar turno" : "Editar turno"}
                             </p>
-                            <h2 id="edit-turno-title" className="mt-2 text-lg font-semibold text-[#1f1a16]">
+                            <h2 id="edit-turno-title" className="mt-2 text-2xl font-semibold tracking-tight text-[#1f1a16]">
                                 Turno del {new Date(editingDate.date).toLocaleString("es-AR", { 
                                     year: "numeric", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" 
                                 })}
                             </h2>
+                            </div>
+                            <span className="rounded-full bg-[#e7ece4] px-3 py-1 text-xs font-semibold text-[#40594e]">
+                                {editingDate.status === "confirmado" ? "Confirmado" : "Completado"}
+                            </span>
                         </div>
                     </div>
 
-                    <form className="mt-6 space-y-5" onSubmit={handleUpdateDate}>
+                    <form className="space-y-5 p-6 sm:p-8" onSubmit={handleUpdateDate}>
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm font-semibold text-[#4d4037]">
+                            <label htmlFor="schedule-date" className="text-sm font-semibold text-[#4d4037]">
                                 Fecha
                             </label>
-                            <input
-                                type="date"
-                                value={editForm.date}
-                                onChange={(event) => handleDateChange(event.target.value)}
-                                className="rounded-2xl border border-[#d8cabd] bg-white px-4 py-3 text-sm text-[#1f1a16] outline-none transition focus:border-[#b56b49] focus:ring-2 focus:ring-[#b56b49]/15"
-                            />
+                            <DatePicker id="schedule-date" value={editForm.date} onChange={handleDateChange} />
                         </div>
                         <div className="flex flex-col gap-2">
                             <label htmlFor="time" className="text-sm font-medium text-[#4d4037]">
                                 Horario
                             </label>
-                            <Select>
+                            <Select disabled={!editForm.date}>
                                 <select
                                     id="time"
                                     name="time"
@@ -257,7 +264,7 @@ function DateCard({ date, dates }: Props) {
                                 </select>
                             </Select>
                         </div>
-                        <div className="flex justify-between gap-3 pt-2">
+                        <div className="flex flex-col-reverse gap-3 border-t border-[#d8cabd] pt-5 sm:flex-row sm:justify-end">
                             <Button
                                 onClick={() => setEditingDate(null)}
                                 variant="outline"
@@ -276,28 +283,29 @@ function DateCard({ date, dates }: Props) {
         )}
 
         {completeDate && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/60 px-4 py-6">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#1f1a16]/70 px-4 py-6 backdrop-blur-sm">
                 <div
                     role="dialog"
                     aria-modal="true"
                     aria-labelledby="complete-turno-title"
                     tabIndex={-1}
-                    className="w-full max-w-md rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] p-6 shadow-[0_20px_50px_rgba(31,26,22,0.18)]"
+                    className="w-full max-w-lg overflow-hidden rounded-[2rem] border border-[#cdbfae] bg-[#f8f3eb] shadow-[0_24px_70px_rgba(31,26,22,0.24)]"
                 >
-                <div className="flex flex-col gap-5">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <p className="text-sm font-semibold uppercase tracking-[0.28em] text-[#6f8f82]">
+                <div className="flex flex-col">
+                    <div className="border-b border-[#d8cabd] bg-[#eef3ec] px-6 py-6 sm:px-8">
+                        <p className="text-sm font-semibold text-[#4f6d60]">
                                 Completar turno
-                            </p>
-                            <h2 id="complete-turno-title" className="mt-2 text-lg font-semibold text-[#1f1a16]">
+                        </p>
+                        <h2 id="complete-turno-title" className="mt-2 text-2xl font-semibold tracking-tight text-[#1f1a16]">
                                 ¿Desea completar el turno del {new Date(completeDate.date).toLocaleString("es-AR", { 
                                 weekday: "long", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" 
                                 })}?
-                            </h2>
-                        </div>
+                        </h2>
+                        <p className="mt-3 text-sm leading-6 text-[#5c4f44]">
+                            Esta acción marcará la reserva como realizada.
+                        </p>
                     </div>
-                    <form className="flex w-full flex-col gap-4 sm:flex-row sm:justify-center" onSubmit={handleCompleteDateStatus}>
+                    <form className="flex w-full flex-col-reverse gap-3 p-6 sm:flex-row sm:justify-end sm:p-8" onSubmit={handleCompleteDateStatus}>
                         <Button
                             onClick={() => setCompleteDate(null)}
                             variant="outline"
