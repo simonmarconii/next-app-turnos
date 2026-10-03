@@ -2,41 +2,38 @@ import DatesForm from "@/components/dates-form";
 import { prisma } from "@/lib/prisma";
 import { DateType } from "@/lib/definitions";
 import { ServiceType } from "@/lib/definitions";
+import { getBookingDateRange } from "@/lib/booking-date-range";
 
 export default async function SchedulesPage() {
     let servicesData: ServiceType[] = [];
     let datesData: DateType[] = [];
+    let unavailablePeriods: { startDate: string; endDate: string }[] = [];
 
     try {
-        const services = await prisma.service.findMany();
-
-        if (!services) {
-            console.error("No services found");
-        }
+        const { today } = getBookingDateRange();
+        const [services, schedules, periods] = await Promise.all([
+            prisma.service.findMany(),
+            prisma.schedule.findMany({
+                include: { service: true },
+                where: { status: "confirmado" },
+            }),
+            prisma.unavailable_period.findMany({
+                where: { end_date: { gte: new Date(`${today}T00:00:00.000Z`) } },
+                orderBy: { start_date: "asc" },
+            }),
+        ]);
 
         servicesData = services;
-    } catch (error) {
-        console.error("Error fetching services:", error);
-    }
-
-    try {
-        const schedules = await prisma.schedule.findMany({
-            include: { service: true },
-            where: { 
-                status: "confirmado",
-            }
-        });
-
-        if (!schedules) {
-            console.error("No schedules found");
-        }
-
         datesData = schedules;
+        unavailablePeriods = periods.map((period) => ({
+            startDate: period.start_date.toISOString().slice(0, 10),
+            endDate: period.end_date.toISOString().slice(0, 10),
+        }));
     } catch (error) {
-        console.error("Error fetching schedules:", error);
+        console.error("Error fetching booking data:", error);
     }
 
     return (
-        <DatesForm services={servicesData} dates={datesData} />
+        <DatesForm services={servicesData} dates={datesData} unavailablePeriods={unavailablePeriods} />
     );
 }

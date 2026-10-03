@@ -15,6 +15,7 @@ import { userScheduleSchema } from '@/schemas/user';
 import { createCheckout, createSchedule } from '@/lib/actions';
 import DatePicker from './date-picker';
 import { getBookingDateError } from '@/lib/booking-date-range';
+import type { UnavailablePeriod } from '@/lib/booking-date-range';
 
 type FormData = {
     paymentMethod: string;
@@ -65,9 +66,10 @@ type ErrorsType = {
 type Props = {
     services: ServiceType[];
     dates: DateType[];
+    unavailablePeriods: UnavailablePeriod[];
 }
 
-function DatesForm({ services, dates }: Props) {
+function DatesForm({ services, dates, unavailablePeriods }: Props) {
     const [step, setStep] = useState(0);
     const [formData, setFormData] = useState(initialFormData);;
     const [errors, setErrors] = useState<ErrorsType>({});
@@ -128,7 +130,7 @@ function DatesForm({ services, dates }: Props) {
 
         if (step === 1) {
             const result = dateSchema.safeParse({ date: formData.date, time: formData.time });
-            const dateError = result.success ? getBookingDateError(formData.date) : null;
+            const dateError = result.success ? getBookingDateError(formData.date, unavailablePeriods) : null;
             if (!result.success || dateError) {
                 newErrors.stepTwo = dateError ?? "Por favor, completá todos los campos de fecha y hora.";
             }
@@ -260,6 +262,7 @@ function DatesForm({ services, dates }: Props) {
                                         onChange={handleDateChange}
                                         ariaDescribedBy={errors.stepTwo ? "step-two-error" : undefined}
                                         hasError={Boolean(errors.stepTwo)}
+                                        unavailablePeriods={unavailablePeriods}
                                     />
                                 </div>
 

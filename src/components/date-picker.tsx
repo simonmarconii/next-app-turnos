@@ -6,14 +6,18 @@ import { FaRegCalendarAlt } from "react-icons/fa";
 import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/style.css";
-import { getBookingDateRange } from "@/lib/booking-date-range";
+import { getBookingDateRange, type UnavailablePeriod } from "@/lib/booking-date-range";
 
 type Props = {
     value: string;
     onChange: (value: string) => void;
+    mode?: "booking" | "admin";
+    minDate?: string;
+    maxDate?: string | null;
     id?: string;
     ariaDescribedBy?: string;
     hasError?: boolean;
+    unavailablePeriods?: UnavailablePeriod[];
 };
 
 function formatSelectedDate(value: string) {
@@ -22,9 +26,11 @@ function formatSelectedDate(value: string) {
     return format(parseISO(value), "EEEE d 'de' MMMM", { locale: es });
 }
 
-export default function DatePicker({ value, onChange, id, ariaDescribedBy, hasError = false }: Props) {
+export default function DatePicker({ value, onChange, mode = "booking", minDate, maxDate, id, ariaDescribedBy, hasError = false, unavailablePeriods = [] }: Props) {
     const [open, setOpen] = useState(false);
-    const { today, maxDate } = getBookingDateRange();
+    const { today, maxDate: bookingMaxDate } = getBookingDateRange();
+    const resolvedMinDate = minDate ?? today;
+    const resolvedMaxDate = maxDate !== undefined ? maxDate : mode === "booking" ? bookingMaxDate : null;
     const selected = value ? parseISO(value) : undefined;
 
     return (
@@ -61,12 +67,16 @@ export default function DatePicker({ value, onChange, id, ariaDescribedBy, hasEr
                             setOpen(false);
                         }}
                         disabled={[
-                            { before: parseISO(today) },
-                            { after: parseISO(maxDate) },
-                            { dayOfWeek: [0] },
+                            { before: parseISO(resolvedMinDate) },
+                            ...(resolvedMaxDate ? [{ after: parseISO(resolvedMaxDate) }] : []),
+                            ...(mode === "booking" ? [{ dayOfWeek: [0] as number[] }] : []),
+                            ...unavailablePeriods.map((period) => ({
+                                from: parseISO(period.startDate),
+                                to: parseISO(period.endDate),
+                            })),
                         ]}
-                        startMonth={parseISO(today)}
-                        endMonth={parseISO(maxDate)}
+                        startMonth={parseISO(resolvedMinDate)}
+                        endMonth={resolvedMaxDate ? parseISO(resolvedMaxDate) : undefined}
                         classNames={{
                             today: "font-bold text-[#b56b49]",
                             selected: "!bg-[#b56b49] !text-white",
