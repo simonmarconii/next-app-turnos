@@ -3,6 +3,23 @@ import ServicesList from "@/components/services-list";
 import AddServiceForm from "@/components/add-service-form";
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import UnavailablePeriodsManager from "@/components/unavailable-periods-manager";
+import { getBookingDateRange } from "@/lib/booking-date-range";
+import { prisma } from "@/lib/prisma";
+
+async function prismaUnavailablePeriods(today: string) {
+    const periods = await prisma.unavailable_period.findMany({
+        where: { end_date: { gte: new Date(`${today}T00:00:00.000Z`) } },
+        orderBy: { start_date: "asc" },
+    });
+
+    return periods.map((period) => ({
+        id: period.id,
+        startDate: period.start_date.toISOString().slice(0, 10),
+        endDate: period.end_date.toISOString().slice(0, 10),
+        reason: period.reason,
+    }));
+}
 
 type Props = {
     searchParams: {
@@ -15,6 +32,8 @@ export default async function AdminPage({ searchParams }: Props) {
     const cookieStore = await cookies();
     const supabase = await createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
+    const { today } = getBookingDateRange();
+    const unavailablePeriods = await prismaUnavailablePeriods(today);
 
     return (
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-16">
@@ -50,6 +69,14 @@ export default async function AdminPage({ searchParams }: Props) {
                     </h2>
                     <AddServiceForm />
                     <ServicesList />
+                </div>
+                <div className="rounded-[2rem] border border-[#cdbfae] bg-[#fdfaf5] p-6 shadow-[0_10px_30px_rgba(31,26,22,0.04)]">
+                    <h2 className="border-b border-[#cdbfae] pb-3 text-2xl font-semibold text-[#1f1a16]">
+                        Disponibilidad
+                    </h2>
+                    <div className="mt-5">
+                        <UnavailablePeriodsManager initialPeriods={unavailablePeriods} />
+                    </div>
                 </div>
             </section>
         </div>

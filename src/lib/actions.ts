@@ -1,8 +1,10 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { Preference } from "mercadopago";
 import { z } from "zod";
+import { isValid, parseISO } from "date-fns";
 import EmailTemplate from "@/components/email-template";
 import RescheduledEmailTemplate from "@/components/rescheduled-email-template";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +14,8 @@ import { formatEmailDateTime, sendEmail } from "@/lib/email";
 import { dateSchema, scheduleSchema } from "@/schemas/schedule";
 import { priceSchema, serviceSchema } from "@/schemas/service";
 import { userLoginSchema } from "@/schemas/user";
-import { getBookingDateError } from "@/lib/booking-date-range";
+import { unavailablePeriodSchema } from "@/schemas/unavailable-period";
+import { getBookingDateError, getBookingDateRange } from "@/lib/booking-date-range";
 
 type ActionResult<T = undefined> =
     | { success: true; data: T }
@@ -30,6 +33,18 @@ async function requireAuthenticatedUser() {
     }
 
     return user;
+}
+
+async function hasUnavailablePeriod(date: string) {
+    const day = new Date(`${date}T00:00:00.000Z`);
+    const period = await prisma.unavailable_period.findFirst({
+        where: {
+            start_date: { lte: day },
+            end_date: { gte: day },
+        },
+    });
+
+    return Boolean(period);
 }
 
 function actionError(error: unknown): ActionResult<never> {
@@ -59,6 +74,10 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
     if (bookingDateError) return { success: false, error: bookingDateError };
 
     try {
+        if (await hasUnavailablePeriod(date)) {
+            return { success: false, error: "El profesional no está disponible en la fecha seleccionada." };
+        }
+
         let user = await prisma.user.findFirst({ where: { email } });
 
         if (!user) {
@@ -214,6 +233,10 @@ export async function rescheduleSchedule(
     if (bookingDateError) return { success: false, error: bookingDateError };
 
     try {
+        if (await hasUnavailablePeriod(parsed.data.date)) {
+            return { success: false, error: "El profesional no está disponible en la fecha seleccionada." };
+        }
+
         await prisma.$transaction(async (tx) => {
             const schedule = await tx.schedule.findUnique({ where: { id: scheduleId } });
             if (!schedule) throw new Error("Turno no encontrado");
@@ -253,6 +276,59 @@ export async function rescheduleSchedule(
         if (error instanceof Error && error.message === "Turno no encontrado") {
             return { success: false, error: error.message };
         }
+        return actionError(error);
+    }
+}
+
+export async function createUnavailablePeriod(input: unknown): Promise<ActionResult<{ id: string }>> {
+    await requireAuthenticatedUser();
+
+    const parsed = unavailablePeriodSchema.safeParse(input);
+    if (!parsed.success) {
+        return {
+            success: false,
+            error: "Datos inválidos",
+            fieldErrors: parsed.error.flatten().fieldErrors,
+        };
+    }
+
+    const { startDate, endDate, reason } = parsed.data;
+    const { today } = getBookingDateRange();
+
+    if (!isValid(parseISO(startDate)) || !isValid(parseISO(endDate))) {
+        return { success: false, error: "Las fechas no son válidas" };
+    }
+    if (startDate < today) return { success: false, error: "La fecha inicial no puede estar en el pasado" };
+    if (endDate < startDate) return { success: false, error: "La fecha final debe ser posterior o igual a la inicial" };
+
+    try {
+        const period = await prisma.unavailable_period.create({
+            data: {
+                start_date: new Date(`${startDate}T00:00:00.000Z`),
+                end_date: new Date(`${endDate}T00:00:00.000Z`),
+                reason: reason || null,
+            },
+        });
+
+        revalidatePath("/admin");
+        revalidatePath("/turnos");
+        return { success: true, data: { id: period.id } };
+    } catch (error) {
+        return actionError(error);
+    }
+}
+
+export async function deleteUnavailablePeriod(periodId: string): Promise<ActionResult> {
+    await requireAuthenticatedUser();
+    const parsedId = z.uuid().safeParse(periodId);
+    if (!parsedId.success) return { success: false, error: "Bloqueo no encontrado" };
+
+    try {
+        await prisma.unavailable_period.delete({ where: { id: periodId } });
+        revalidatePath("/admin");
+        revalidatePath("/turnos");
+        return { success: true, data: undefined };
+    } catch (error) {
         return actionError(error);
     }
 }
