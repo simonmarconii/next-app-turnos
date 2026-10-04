@@ -1,11 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { releaseExpiredPendingSchedules } from "@/lib/schedule-availability";
 export async function GET() {
     try {
+        await releaseExpiredPendingSchedules();
         const schedules = await prisma.schedule.findMany({
             include: { service: true },
-            where: { 
-                status: "confirmado",
-            }
+            where: {
+                OR: [
+                    { status: "confirmado" },
+                    { status: "pendiente", expires_in: { gt: new Date() } },
+                ],
+            },
         });
 
         if (!schedules) {

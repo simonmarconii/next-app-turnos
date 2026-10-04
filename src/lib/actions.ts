@@ -17,6 +17,7 @@ import { userLoginSchema } from "@/schemas/user";
 import { unavailablePeriodSchema } from "@/schemas/unavailable-period";
 import { getBookingDateError, getBookingDateRange } from "@/lib/booking-date-range";
 import { requireAdmin } from "./auth";
+import { releaseExpiredPendingSchedules, releasePendingSchedule } from "@/lib/schedule-availability";
 
 type ActionResult<T = undefined> =
     | { success: true; data: T }
@@ -63,45 +64,54 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
     if (bookingDateError) return { success: false, error: bookingDateError };
 
     try {
+        await releaseExpiredPendingSchedules();
+
         if (await hasUnavailablePeriod(date)) {
             return { success: false, error: "El profesional no está disponible en la fecha seleccionada." };
-        }
-
-        let user = await prisma.user.findFirst({ where: { email } });
-
-        if (!user) {
-            user = await prisma.user.create({
-                data: { name, lastname, email, phone },
-            });
         }
 
         const expiresIn = paymentMethod === "transferencia" ? new Date() : null;
         if (expiresIn) expiresIn.setMinutes(expiresIn.getMinutes() + 10);
 
-        const newSchedule = await prisma.schedule.create({
-            data: {
-                date: realDate,
-                user_id: user.id,
-                expires_in: expiresIn,
-                service_id: serviceId,
-            },
-            include: { service: true },
-        });
+        const newSchedule = await prisma.$transaction(async (tx) => {
+            const service = await tx.service.findUniqueOrThrow({ where: { id: serviceId } });
+            let user = await tx.user.findFirst({ where: { email } });
 
-        if (paymentMethod !== "transferencia") {
-            await prisma.payment.create({
+            if (!user) {
+                user = await tx.user.create({
+                    data: { name, lastname, email, phone },
+                });
+            }
+
+            const schedule = await tx.schedule.create({
                 data: {
-                    schedule_id: newSchedule.id,
-                    amount: newSchedule.service.price,
-                    payment_method: "in_person",
+                    date: realDate,
+                    user_id: user.id,
+                    expires_in: expiresIn,
+                    service_id: service.id,
                 },
             });
 
-            await prisma.schedule.update({
-                where: { id: newSchedule.id },
-                data: { status: "confirmado", updated_at: new Date() },
+            if (paymentMethod !== "transferencia") {
+                await tx.payment.create({
+                    data: {
+                        schedule_id: schedule.id,
+                        amount: service.price,
+                        payment_method: "in_person",
+                    },
+                });
+
+                await tx.schedule.update({
+                    where: { id: schedule.id },
+                    data: { status: "confirmado", updated_at: new Date() },
+                });
+            }
+
+            return tx.schedule.findUniqueOrThrow({
+                where: { id: schedule.id },
+                include: { service: true, user: true },
             });
-        }
+        });
 
         // El envío forma parte del flujo de reserva, pero su implementación
         // está aislada para poder reutilizarla desde otras features.
@@ -109,11 +119,11 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
             try {
                 const { date, time } = formatEmailDateTime(newSchedule.date);
                 await sendEmail({
-                    to: user.email,
+                    to: newSchedule.user.email,
                     subject: "Tu turno ha sido reservado.",
                     react: EmailTemplate({
-                        name: user.name,
-                        lastname: user.lastname,
+                        name: newSchedule.user.name,
+                        lastname: newSchedule.user.lastname,
                         date,
                         time,
                         serviceName: newSchedule.service.name,
@@ -128,6 +138,9 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
 
         return { success: true, data: { id: newSchedule.id } };
     } catch (error) {
+        if (error instanceof Error && "code" in error && error.code === "P2002") {
+            return { success: false, error: "El horario seleccionado ya no está disponible." };
+        }
         return actionError(error);
     }
 }
@@ -193,6 +206,9 @@ export async function createCheckout(scheduleId: string): Promise<ActionResult<{
             data: { initPoint: preference.init_point ?? preference.sandbox_init_point ?? "" },
         };
     } catch (error) {
+        await releasePendingSchedule(scheduleId).catch((cleanupError) => {
+            console.error("Error al liberar el turno pendiente:", cleanupError);
+        });
         return actionError(error);
     }
 }
