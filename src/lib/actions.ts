@@ -18,6 +18,7 @@ import { unavailablePeriodSchema } from "@/schemas/unavailable-period";
 import { getBookingDateError, getBookingDateRange } from "@/lib/booking-date-range";
 import { requireAdmin } from "./auth";
 import { releaseExpiredPendingSchedules, releasePendingSchedule } from "@/lib/schedule-availability";
+import { createScheduleAccessToken, hashScheduleAccessToken } from "@/lib/schedule-access";
 
 type ActionResult<T = undefined> =
     | { success: true; data: T }
@@ -42,7 +43,7 @@ function actionError(error: unknown): ActionResult<never> {
     return { success: false, error: "Error interno del servidor" };
 }
 
-export async function createSchedule(input: unknown): Promise<ActionResult<{ id: string }>> {
+export async function createSchedule(input: unknown): Promise<ActionResult<{ id: string; accessToken: string }>> {
     const parsed = scheduleSchema.safeParse(input);
 
     if (!parsed.success) {
@@ -72,6 +73,7 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
 
         const expiresIn = paymentMethod === "transferencia" ? new Date() : null;
         if (expiresIn) expiresIn.setMinutes(expiresIn.getMinutes() + 10);
+        const accessToken = createScheduleAccessToken();
 
         const newSchedule = await prisma.$transaction(async (tx) => {
             const service = await tx.service.findUniqueOrThrow({ where: { id: serviceId } });
@@ -89,6 +91,8 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
                     user_id: user.id,
                     expires_in: expiresIn,
                     service_id: service.id,
+                    access_token_hash: accessToken.tokenHash,
+                    access_token_expires_at: accessToken.expiresAt,
                 },
             });
 
@@ -115,28 +119,28 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
 
         // El envío forma parte del flujo de reserva, pero su implementación
         // está aislada para poder reutilizarla desde otras features.
-        if (paymentMethod !== "transferencia") {
-            try {
-                const { date, time } = formatEmailDateTime(newSchedule.date);
-                await sendEmail({
-                    to: newSchedule.user.email,
-                    subject: "Tu turno ha sido reservado.",
-                    react: EmailTemplate({
-                        name: newSchedule.user.name,
-                        lastname: newSchedule.user.lastname,
-                        date,
-                        time,
-                        serviceName: newSchedule.service.name,
-                    }),
-                });
-            } catch (error) {
+        try {
+            const { date, time } = formatEmailDateTime(newSchedule.date);
+            await sendEmail({
+                to: newSchedule.user.email,
+                subject: paymentMethod === "transferencia" ? "Recibimos tu solicitud de turno." : "Tu turno ha sido reservado.",
+                react: EmailTemplate({
+                    name: newSchedule.user.name,
+                    lastname: newSchedule.user.lastname,
+                    date,
+                    time,
+                    serviceName: newSchedule.service.name,
+                    summaryUrl: `${process.env.NEXT_PUBLIC_API_URL}/turnos/resumen?token=${encodeURIComponent(accessToken.token)}`,
+                    pending: paymentMethod === "transferencia",
+                }),
+            });
+        } catch (error) {
                 // El turno ya fue creado; un fallo del proveedor de email no
                 // debe convertir una reserva válida en una reserva fallida.
-                console.error("Error al enviar el email de confirmación:", error);
-            }
+            console.error("Error al enviar el email de confirmación:", error);
         }
 
-        return { success: true, data: { id: newSchedule.id } };
+        return { success: true, data: { id: newSchedule.id, accessToken: accessToken.token } };
     } catch (error) {
         if (error instanceof Error && "code" in error && error.code === "P2002") {
             return { success: false, error: "El horario seleccionado ya no está disponible." };
@@ -145,9 +149,10 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
     }
 }
 
-export async function createCheckout(scheduleId: string): Promise<ActionResult<{ initPoint: string }>> {
+export async function createCheckout(scheduleId: string, accessToken: string): Promise<ActionResult<{ initPoint: string }>> {
     const parsedId = z.uuid().safeParse(scheduleId);
-    if (!parsedId.success) return { success: false, error: "Turno no encontrado" };
+    const parsedToken = z.string().min(32).safeParse(accessToken);
+    if (!parsedId.success || !parsedToken.success) return { success: false, error: "Turno no encontrado" };
 
     try {
         const schedule = await prisma.schedule.findUnique({
@@ -156,6 +161,13 @@ export async function createCheckout(scheduleId: string): Promise<ActionResult<{
         });
 
         if (!schedule) return { success: false, error: "Turno no encontrado" };
+        if (
+            schedule.access_token_hash !== hashScheduleAccessToken(accessToken) ||
+            !schedule.access_token_expires_at ||
+            schedule.access_token_expires_at < new Date()
+        ) {
+            return { success: false, error: "Turno no encontrado" };
+        }
 
         const existingPayment = await prisma.payment.findFirst({
             where: { schedule_id: schedule.id },
@@ -183,7 +195,7 @@ export async function createCheckout(scheduleId: string): Promise<ActionResult<{
                 external_reference: schedule.id,
                 auto_return: "approved",
                 back_urls: {
-                    success: `${process.env.NEXT_PUBLIC_API_URL}/turnos/resumen?id=${schedule.id}`,
+                    success: `${process.env.NEXT_PUBLIC_API_URL}/turnos/resumen?token=${encodeURIComponent(accessToken)}`,
                     failure: `${process.env.NEXT_PUBLIC_API_URL}/`,
                     pending: `${process.env.NEXT_PUBLIC_API_URL}/`,
                 },
@@ -238,6 +250,7 @@ export async function rescheduleSchedule(
     if (bookingDateError) return { success: false, error: bookingDateError };
 
     try {
+        const accessToken = createScheduleAccessToken();
         if (await hasUnavailablePeriod(parsed.data.date)) {
             return { success: false, error: "El profesional no está disponible en la fecha seleccionada." };
         }
@@ -249,6 +262,14 @@ export async function rescheduleSchedule(
             await tx.schedule.update({
                 where: { id: scheduleId },
                 data: { date: realDate, updated_at: new Date() },
+            });
+
+            await tx.schedule.update({
+                where: { id: scheduleId },
+                data: {
+                    access_token_hash: accessToken.tokenHash,
+                    access_token_expires_at: accessToken.expiresAt,
+                },
             });
         });
 
@@ -270,6 +291,7 @@ export async function rescheduleSchedule(
                     date,
                     time,
                     serviceName: schedule.service.name,
+                    summaryUrl: `${process.env.NEXT_PUBLIC_API_URL}/turnos/resumen?token=${encodeURIComponent(accessToken.token)}`,
                 }),
             });
             return { success: true, data: { emailSent: true } };

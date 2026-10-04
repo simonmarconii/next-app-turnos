@@ -48,6 +48,11 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (request.nextUrl.pathname === "/turnos/resumen" && request.nextUrl.searchParams.has("token")) {
+    supabaseResponse.headers.set("Cache-Control", "no-store");
+    supabaseResponse.headers.set("Referrer-Policy", "no-referrer");
+  }
+
   return supabaseResponse;
 }
 
