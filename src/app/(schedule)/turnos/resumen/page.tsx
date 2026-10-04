@@ -1,16 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { hashScheduleAccessToken } from "@/lib/schedule-access";
 import { DateType } from "@/lib/definitions";
 
 type Props = {
     searchParams: {
-        id?: string;
+        token?: string;
     };
 };
 
 export default async function ResumePage({ searchParams }: Props) {
-    const { id } = await searchParams;
+    const { token } = await searchParams;
 
-    if (!id) {
+    if (!token) {
         return (
             <div>Turno no encontrado</div>
         )
@@ -20,7 +21,10 @@ export default async function ResumePage({ searchParams }: Props) {
 
     try {
         const schedule = await prisma.schedule.findFirst({
-            where: { id },
+            where: {
+                access_token_hash: hashScheduleAccessToken(token),
+                access_token_expires_at: { gt: new Date() },
+            },
             include: {
                 service: true,
                 user: true,

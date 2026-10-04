@@ -176,7 +176,10 @@ function DatesForm({ services, dates, unavailablePeriods }: Props) {
                 return;
             } else {
                 if (formData.paymentMethod === "transferencia") {
-                    const checkoutResult = await createCheckout(scheduleResult.data.id);
+                    const checkoutResult = await createCheckout(
+                        scheduleResult.data.id,
+                        scheduleResult.data.accessToken,
+                    );
 
                     if (!checkoutResult.success || !checkoutResult.data.initPoint) {
                         console.error("Error en checkout", checkoutResult.success ? "URL de pago vacía" : checkoutResult.error);
@@ -186,7 +189,7 @@ function DatesForm({ services, dates, unavailablePeriods }: Props) {
 
                     router.push(checkoutResult.data.initPoint);
                 } else {
-                    router.push(`/turnos/resumen?id=${scheduleResult.data.id}`);
+                    router.push(`/turnos/resumen?token=${encodeURIComponent(scheduleResult.data.accessToken)}`);
                 }
             }
 
