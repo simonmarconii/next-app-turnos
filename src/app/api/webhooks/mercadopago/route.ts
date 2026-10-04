@@ -1,132 +1,192 @@
 import { prisma } from "@/lib/prisma";
 import mercadoPagoClient from "@/lib/mercadopago";
-import { Payment, WebhookSignatureValidator, InvalidWebhookSignatureError } from "mercadopago";
+import { Payment, WebhookSignatureValidator } from "mercadopago";
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import EmailTemplate from "@/components/email-template";
 import { formatEmailDateTime, sendEmail } from "@/lib/email";
 
 const paymentClient = new Payment(mercadoPagoClient);
 
+const webhookBodySchema = z.object({
+    action: z.string().optional(),
+    data: z.object({
+        id: z.string().min(1),
+    }),
+});
+
+const supportedActions = new Set(["payment.created", "payment.updated"]);
+
+function jsonResponse(body: unknown, status: number) {
+    return new Response(JSON.stringify(body), {
+        status,
+        headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": "no-store",
+        },
+    });
+}
+
 export async function POST(request: NextRequest) {
+    const secret = process.env.MERCADO_PAGO_WEBHOOK_SECRET;
 
-    const { searchParams } = new URL(request.url);
-
-    const xSignature = request.headers.get('x-signature');
-    const xRequestId = request.headers.get('x-request-id');
-    const dataId = searchParams.get('data.id');
-
-    const secret = process.env.MERCADO_PAGO_SECRET_KEY;
     if (!secret) {
-        return new Response("Server misconfiguration", {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-        });
+        console.error("MERCADO_PAGO_WEBHOOK_SECRET is not configured");
+        return jsonResponse({ error: "Server misconfiguration" }, 500);
     }
+
+    const xSignature = request.headers.get("x-signature");
+    const xRequestId = request.headers.get("x-request-id");
+    const dataId = new URL(request.url).searchParams.get("data.id");
 
     try {
         WebhookSignatureValidator.validate({
             xSignature,
             xRequestId,
             dataId,
-            secret
-        })
-    } catch (error) {
-        if (error instanceof InvalidWebhookSignatureError) {
-            return new Response("Invalid signature", {
-                status: 401,
-            })
-        }
+            secret,
+        });
+    } catch {
+        return jsonResponse({ error: "Invalid signature" }, 401);
     }
 
-    const body: {data: {id: string}, action?: string} = await request.json();
-
-    if (body.action && body.action !== "payment.created" && body.action !== "payment.updated") {
-        return new Response("Action ignored", { status: 200 });
+    let rawBody: unknown;
+    try {
+        rawBody = await request.json();
+    } catch {
+        return jsonResponse({ error: "Invalid JSON" }, 400);
     }
+
+    const parsedBody = webhookBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+        return jsonResponse({ error: "Invalid payload" }, 400);
+    }
+
+    const { action, data } = parsedBody.data;
+    if (action && !supportedActions.has(action)) {
+        return new Response(null, { status: 200 });
+    }
+
+    const eventKey = `${action ?? "payment"}:${data.id}`;
 
     try {
-        const payment = await paymentClient.get({ id: body.data.id });
+        const payment = await paymentClient.get({ id: data.id });
+        const scheduleId = z.uuid().safeParse(payment.external_reference);
 
-        const scheduleId = payment.external_reference;
-
-        if (!scheduleId) {
-            return new Response("Missing references", { status: 400 });
+        if (!scheduleId.success) {
+            return jsonResponse({ error: "Missing references" }, 400);
         }
 
-        let shouldSendEmail = false;
+        if (payment.status !== "approved" && payment.status !== "rejected") {
+            return new Response(null, { status: 200 });
+        }
 
-        await prisma.$transaction(async (tx) => {
-            const currentSchedule = await tx.schedule.findUnique({
-                where: { id: scheduleId }
+        const result = await prisma.$transaction(async (tx) => {
+            const existingEvent = await tx.payment_webhook_event.findUnique({
+                where: { event_key: eventKey },
             });
 
-            if (!currentSchedule) return;
+            const currentSchedule = await tx.schedule.findUnique({
+                where: { id: scheduleId.data },
+            });
 
-            if (currentSchedule.status === "confirmado") return;
+            if (!currentSchedule) {
+                if (!existingEvent) {
+                    await tx.payment_webhook_event.create({
+                        data: {
+                            event_key: eventKey,
+                            external_payment_id: data.id,
+                            action,
+                        },
+                    });
+                }
+                return { sendEmail: false, eventId: existingEvent?.id };
+            }
 
-            if (payment.status === 'approved') {
-                await tx.schedule.update({
-                    where: { id: scheduleId },
-                    data: {
-                        status: "confirmado",
-                        updated_at: new Date(),
-                    }
-                });
-        
+            if (existingEvent?.email_sent_at || (existingEvent && payment.status !== "approved")) {
+                return { sendEmail: false, eventId: existingEvent.id };
+            }
+
+            if (payment.status === "approved") {
+                if (currentSchedule.status !== "confirmado") {
+                    await tx.schedule.update({
+                        where: { id: scheduleId.data },
+                        data: { status: "confirmado", updated_at: new Date() },
+                    });
+
+                }
+
                 await tx.payment.update({
-                    where: { schedule_id: scheduleId },
+                    where: { schedule_id: scheduleId.data },
                     data: {
                         status: "aprobado",
                         updated_at: new Date(),
                         payment_method: payment.payment_method?.type,
-                    }
+                    },
                 });
 
-                shouldSendEmail = true;
-            } else if (payment.status === 'rejected') {
-                await tx.payment.deleteMany({
-                    where: { schedule_id: scheduleId }
+                const event = existingEvent ?? await tx.payment_webhook_event.create({
+                    data: {
+                        event_key: eventKey,
+                        external_payment_id: data.id,
+                        action,
+                    },
                 });
 
-                await tx.schedule.delete({
-                    where: { id: scheduleId }
-                });
+                return { sendEmail: !event.email_sent_at, eventId: event.id };
             }
+
+            if (payment.status === "rejected" && currentSchedule.status !== "confirmado") {
+                await tx.payment.deleteMany({ where: { schedule_id: scheduleId.data } });
+                await tx.schedule.delete({ where: { id: scheduleId.data } });
+            }
+
+            const event = existingEvent ?? await tx.payment_webhook_event.create({
+                data: {
+                    event_key: eventKey,
+                    external_payment_id: data.id,
+                    action,
+                    email_sent_at: new Date(),
+                },
+            });
+
+            return { sendEmail: false, eventId: event.id };
         });
 
-        if (shouldSendEmail) {
-            const schedule = await prisma.schedule.findUnique({
-                where: { id: scheduleId },
-                include: { service: true, user: true },
-            });
+        if (result.sendEmail && result.eventId) {
+            try {
+                const schedule = await prisma.schedule.findUnique({
+                    where: { id: scheduleId.data },
+                    include: { service: true, user: true },
+                });
 
-            if (!schedule) {
-                throw new Error("Turno no encontrado");
+                if (schedule) {
+                    const { date, time } = formatEmailDateTime(schedule.date);
+                    await sendEmail({
+                        to: schedule.user.email,
+                        subject: "Tu turno ha sido reservado.",
+                        react: EmailTemplate({
+                            name: schedule.user.name,
+                            lastname: schedule.user.lastname,
+                            date,
+                            time,
+                            serviceName: schedule.service.name,
+                        }),
+                    });
+                }
+
+                await prisma.payment_webhook_event.update({
+                    where: { id: result.eventId },
+                    data: { email_sent_at: new Date() },
+                });
+            } catch (emailError) {
+                console.error("Error sending payment confirmation email:", emailError);
             }
-
-            const { date, time } = formatEmailDateTime(schedule.date);
-            await sendEmail({
-                to: schedule.user.email,
-                subject: "Tu turno ha sido reservado.",
-                react: EmailTemplate({
-                    name: schedule.user.name,
-                    lastname: schedule.user.lastname,
-                    date,
-                    time,
-                    serviceName: schedule.service.name,
-                }),
-            });
         }
 
-        return new Response(null, {
-            status: 200,
-            headers: { 'Cache-Control': 'no-store' }
-        });
+        return new Response(null, { status: 200, headers: { "Cache-Control": "no-store" } });
     } catch (error) {
-        console.error("Error processing webhook:", error);
-        return new Response(JSON.stringify({error: "Error interno del servidor"}), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
-        })
+        console.error("Error processing Mercado Pago webhook:", error);
+        return jsonResponse({ error: "Internal server error" }, 500);
     }
 }

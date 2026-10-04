@@ -67,6 +67,15 @@ model unavailable_period {
   @@index([start_date, end_date])
 }
 
+model payment_webhook_event {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  event_key           String    @unique @db.VarChar
+  external_payment_id String    @db.VarChar
+  action              String?   @db.VarChar
+  email_sent_at       DateTime? @db.Timestamptz(6)
+  created_at          DateTime  @default(now()) @db.Timestamptz(6)
+}
+
 enum PaymentMethods {
   tarjeta
   transferencia
