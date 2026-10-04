@@ -47,10 +47,18 @@ next-env.d.ts
 skills-lock.json
 
 # prisma
-/generated/prisma
+/generated/**
 
 # vscode
 .vscode/*
 
 # vitest
 .vitest/
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

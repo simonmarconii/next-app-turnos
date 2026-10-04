@@ -10,7 +10,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run --passWithNoTests",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "promote-admin": "tsx scripts/promote-admin.ts"
   },
   "dependencies": {
     "@mercadopago/sdk-react": "^1.0.7",
@@ -32,19 +33,17 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^7.0.1",
-    "@testing-library/react": "^16.3.3",
-    "@testing-library/user-event": "^14.6.7",
     "@types/node": "^20",
     "@types/pg": "^8.20.3",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
-    "jsdom": "^30.1.1",
     "prisma": "^7.9.1",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vitest": "^4.1.11"
   }

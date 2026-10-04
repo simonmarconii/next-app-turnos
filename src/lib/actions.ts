@@ -16,24 +16,13 @@ import { priceSchema, serviceSchema } from "@/schemas/service";
 import { userLoginSchema } from "@/schemas/user";
 import { unavailablePeriodSchema } from "@/schemas/unavailable-period";
 import { getBookingDateError, getBookingDateRange } from "@/lib/booking-date-range";
+import { requireAdmin } from "./auth";
 
 type ActionResult<T = undefined> =
     | { success: true; data: T }
     | { success: false; error: string; fieldErrors?: Record<string, string[]> };
 
 const preferenceClient = new Preference(mercadoPagoClient);
-
-async function requireAuthenticatedUser() {
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-        throw new Error("No autorizado");
-    }
-
-    return user;
-}
 
 async function hasUnavailablePeriod(date: string) {
     const day = new Date(`${date}T00:00:00.000Z`);
@@ -212,7 +201,7 @@ export async function rescheduleSchedule(
     scheduleId: string,
     input: unknown,
 ): Promise<ActionResult<{ emailSent: boolean }>> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
 
     const parsedId = z.uuid().safeParse(scheduleId);
     const parsed = dateSchema.safeParse(input);
@@ -281,7 +270,7 @@ export async function rescheduleSchedule(
 }
 
 export async function createUnavailablePeriod(input: unknown): Promise<ActionResult<{ id: string }>> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
 
     const parsed = unavailablePeriodSchema.safeParse(input);
     if (!parsed.success) {
@@ -319,7 +308,7 @@ export async function createUnavailablePeriod(input: unknown): Promise<ActionRes
 }
 
 export async function deleteUnavailablePeriod(periodId: string): Promise<ActionResult> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
     const parsedId = z.uuid().safeParse(periodId);
     if (!parsedId.success) return { success: false, error: "Bloqueo no encontrado" };
 
@@ -337,7 +326,7 @@ export async function updateScheduleStatus(
     scheduleId: string,
     status: "confirmado" | "completado" | "cancelado",
 ): Promise<ActionResult> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
     const parsedId = z.uuid().safeParse(scheduleId);
     const parsedStatus = z.enum(["confirmado", "completado", "cancelado"]).safeParse(status);
 
@@ -372,7 +361,7 @@ export async function updateScheduleStatus(
 }
 
 export async function createService(input: unknown): Promise<ActionResult<{ id: string }>> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
     const parsed = serviceSchema.safeParse(input);
     if (!parsed.success) {
         return {
@@ -391,7 +380,7 @@ export async function createService(input: unknown): Promise<ActionResult<{ id: 
 }
 
 export async function updateService(serviceId: string, price: unknown): Promise<ActionResult> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
     const parsedId = z.uuid().safeParse(serviceId);
     const parsedPrice = priceSchema.safeParse(price);
     if (!parsedId.success) return { success: false, error: "Servicio no encontrado" };
@@ -406,7 +395,7 @@ export async function updateService(serviceId: string, price: unknown): Promise<
 }
 
 export async function deleteService(serviceId: string): Promise<ActionResult> {
-    await requireAuthenticatedUser();
+    await requireAdmin();
     const parsedId = z.uuid().safeParse(serviceId);
     if (!parsedId.success) return { success: false, error: "Servicio no encontrado" };
 
