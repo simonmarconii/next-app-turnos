@@ -2,9 +2,11 @@ import Link from "next/link";
 import { FaUserCircle } from "react-icons/fa";
 import LogoutButton from "./logout-button";
 import { getUser } from "@/lib/get-user";
+import { isAdmin } from "@/lib/auth";
 
 export default async function Navbar() {
   const user = await getUser();
+  const admin = isAdmin(user);
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 border-b border-[#d8ccb9]/80 bg-[#f6f1e8]/90 backdrop-blur-xl">
@@ -24,7 +26,7 @@ export default async function Navbar() {
           >
             Sacá tu turno
           </Link>
-          {user ? (
+          {admin ? (
             <>
               <Link
                 href="/admin"

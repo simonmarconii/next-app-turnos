@@ -1,8 +1,7 @@
 import DatesList from "@/components/dates-list";
 import ServicesList from "@/components/services-list";
 import AddServiceForm from "@/components/add-service-form";
-import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
+import { requireAdmin } from "@/lib/auth";
 import UnavailablePeriodsManager from "@/components/unavailable-periods-manager";
 import { getBookingDateRange } from "@/lib/booking-date-range";
 import { prisma } from "@/lib/prisma";
@@ -29,9 +28,7 @@ type Props = {
 
 export default async function AdminPage({ searchParams }: Props) {
     const { search_dates: datesQuery } = await searchParams;
-    const cookieStore = await cookies();
-    const supabase = await createClient(cookieStore);
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = await requireAdmin();
     const { today } = getBookingDateRange();
     const unavailablePeriods = await prismaUnavailablePeriods(today);
 
