@@ -19,8 +19,8 @@ function getDateParts(date: Date) {
     }, {});
 }
 
-export function getBookingDateRange() {
-    const parts = getDateParts(new Date());
+export function getBookingDateRange(now = new Date()) {
+    const parts = getDateParts(now);
     const today = `${parts.year}-${parts.month}-${parts.day}`;
     const maxDate = format(addMonths(parseISO(today), 1), "yyyy-MM-dd");
 
@@ -31,8 +31,8 @@ function isSunday(date: string) {
     return new Date(`${date}T12:00:00.000Z`).getUTCDay() === 0;
 }
 
-export function getBookingDateError(date: string, unavailablePeriods: UnavailablePeriod[] = []) {
-    const { today, maxDate } = getBookingDateRange();
+export function getBookingDateError(date: string, unavailablePeriods: UnavailablePeriod[] = [], now = new Date()) {
+    const { today, maxDate } = getBookingDateRange(now);
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !isValid(parseISO(date))) {
         return "La fecha seleccionada no es válida.";

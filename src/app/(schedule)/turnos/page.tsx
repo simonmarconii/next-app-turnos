@@ -15,7 +15,12 @@ export default async function SchedulesPage() {
             prisma.service.findMany(),
             prisma.schedule.findMany({
                 include: { service: true },
-                where: { status: "confirmado" },
+                where: {
+                    OR: [
+                        { status: "confirmado" },
+                        { status: "pendiente", expires_in: { gt: new Date() } },
+                    ],
+                },
             }),
             prisma.unavailable_period.findMany({
                 where: { end_date: { gte: new Date(`${today}T00:00:00.000Z`) } },
