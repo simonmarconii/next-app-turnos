@@ -1,10 +1,11 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers as getRequestHeaders } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { Preference } from "mercadopago";
 import { z } from "zod";
 import { isValid, parseISO } from "date-fns";
+import { createHash } from "node:crypto";
 import EmailTemplate from "@/components/email-template";
 import RescheduledEmailTemplate from "@/components/rescheduled-email-template";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +19,8 @@ import { unavailablePeriodSchema } from "@/schemas/unavailable-period";
 import { getBookingDateError, getBookingDateRange } from "@/lib/booking-date-range";
 import { requireAdmin } from "./auth";
 import { releaseExpiredPendingSchedules, releasePendingSchedule } from "@/lib/schedule-availability";
+import { bookingRateLimit, checkoutRateLimit, loginRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/request";
 import { createScheduleAccessToken, hashScheduleAccessToken } from "@/lib/schedule-access";
 
 type ActionResult<T = undefined> =
@@ -25,6 +28,14 @@ type ActionResult<T = undefined> =
     | { success: false; error: string; fieldErrors?: Record<string, string[]> };
 
 const preferenceClient = new Preference(mercadoPagoClient);
+
+function hashRateLimitValue(value: string) {
+    return createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
+}
+
+async function getRequestIp() {
+    return getClientIp(await getRequestHeaders());
+}
 
 async function hasUnavailablePeriod(date: string) {
     const day = new Date(`${date}T00:00:00.000Z`);
@@ -65,6 +76,16 @@ export async function createSchedule(input: unknown): Promise<ActionResult<{ id:
     if (bookingDateError) return { success: false, error: bookingDateError };
 
     try {
+        const ip = await getRequestIp();
+        const [ipLimit, emailLimit] = await Promise.all([
+            bookingRateLimit.limit(`ip:${ip}`),
+            bookingRateLimit.limit(`email:${hashRateLimitValue(email)}`),
+        ]);
+
+        if (!ipLimit.success || !emailLimit.success) {
+            return { success: false, error: "Demasiados intentos. Esperá unos minutos." };
+        }
+
         await releaseExpiredPendingSchedules();
 
         if (await hasUnavailablePeriod(date)) {
@@ -155,6 +176,16 @@ export async function createCheckout(scheduleId: string, accessToken: string): P
     if (!parsedId.success || !parsedToken.success) return { success: false, error: "Turno no encontrado" };
 
     try {
+        const ip = await getRequestIp();
+        const [ipLimit, scheduleLimit] = await Promise.all([
+            checkoutRateLimit.limit(`ip:${ip}`),
+            checkoutRateLimit.limit(`schedule:${scheduleId}`),
+        ]);
+
+        if (!ipLimit.success || !scheduleLimit.success) {
+            return { success: false, error: "Demasiados intentos. Esperá unos minutos." };
+        }
+
         const schedule = await prisma.schedule.findUnique({
             where: { id: scheduleId },
             include: { service: true, user: true },
@@ -456,6 +487,16 @@ export async function login(input: unknown): Promise<ActionResult> {
     }
 
     try {
+        const ip = await getRequestIp();
+        const [ipLimit, emailLimit] = await Promise.all([
+            loginRateLimit.limit(`ip:${ip}`),
+            loginRateLimit.limit(`email:${hashRateLimitValue(parsed.data.email)}`),
+        ]);
+
+        if (!ipLimit.success || !emailLimit.success) {
+            return { success: false, error: "Demasiados intentos. Esperá unos minutos." };
+        }
+
         const cookieStore = await cookies();
         const supabase = await createClient(cookieStore);
         const { error } = await supabase.auth.signInWithPassword(parsed.data);

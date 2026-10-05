@@ -1,8 +1,24 @@
 import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextFetchEvent, NextResponse, type NextRequest } from "next/server";
+import { getClientIp } from "@/lib/request";
+import { proxyRateLimit } from "@/lib/rate-limit";
 
-export async function proxy(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+export async function proxy(request: NextRequest, context: NextFetchEvent) {
+  let response = NextResponse.next({ request });
+  const ip = getClientIp(request.headers);
+  const rateLimit = await proxyRateLimit.limit(`ip:${ip}`);
+
+  context.waitUntil(rateLimit.pending);
+
+  if (!rateLimit.success) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: {
+        "Retry-After": "10",
+        "Cache-Control": "no-store",
+      },
+    });
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -16,9 +32,9 @@ export async function proxy(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           );
-          supabaseResponse = NextResponse.next({ request });
+          response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
+            response.cookies.set(name, value, options)
           );
         },
       },
@@ -49,11 +65,14 @@ export async function proxy(request: NextRequest) {
   }
 
   if (request.nextUrl.pathname === "/turnos/resumen" && request.nextUrl.searchParams.has("token")) {
-    supabaseResponse.headers.set("Cache-Control", "no-store");
-    supabaseResponse.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
   }
 
-  return supabaseResponse;
+  response.headers.set("X-RateLimit-Limit", rateLimit.limit.toString());
+  response.headers.set("X-RateLimit-Remaining", rateLimit.remaining.toString());
+
+  return response;
 }
 
 export const config = {
