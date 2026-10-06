@@ -3,6 +3,7 @@
 import Button from "./button";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import { MdLogout } from "react-icons/md";
 
 function LogoutButton() {
   const router = useRouter();
@@ -25,7 +26,10 @@ function LogoutButton() {
 
   return (
     <Button variant="secondary" size="small" onClick={handleLogout}>
-      Cerrar sesión
+      <div className="flex items-center gap-2">
+        <MdLogout className="w-5 h-5" />
+        <span className="hidden sm:inline">Cerrar sesión</span>
+      </div>
     </Button>
   );
 }
