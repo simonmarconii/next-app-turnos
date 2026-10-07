@@ -202,7 +202,7 @@ function DatesForm({ services, dates, unavailablePeriods }: Props) {
     }
 
   return (
-    <main className="mx-auto w-full max-w-3xl py-16 lg:py-32">
+    <main className="mx-auto w-full max-w-3xl py-16 px-4 lg:py-32">
         <div className={`overflow-visible rounded-[2rem] border border-[#cdbfae] bg-white/80 shadow-[0_24px_80px_rgba(44,30,18,0.12)] backdrop-blur`}>
             <div className="rounded-t-[2rem] border-b border-[#e6d7c8] bg-gradient-to-r from-[#f4e7da] to-[#eef3ec] px-6 py-5 sm:px-8">
                 <p className="text-sm font-medium uppercase tracking-[0.24em] text-[#7a5a46]">

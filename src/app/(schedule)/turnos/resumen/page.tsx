@@ -13,7 +13,10 @@ export default async function ResumePage({ searchParams }: Props) {
 
     if (!token) {
         return (
-            <div>Turno no encontrado</div>
+            <div className="h-full flex flex-col items-center justify-center gap-2">
+                <p className="text-4xl font-bold">404</p>
+                <p className="text-3xl">Turno no encontrado</p>
+            </div> 
         )
     }
 
